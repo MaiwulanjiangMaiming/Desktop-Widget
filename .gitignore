@@ -1,1 +1,15 @@
 .DS_Store
+.AppleDouble
+.LSOverride
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+.vscode/
+.idea/
+
+todo.txt
+Pic.png
