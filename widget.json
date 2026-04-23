@@ -1,6 +1,6 @@
 {
   "name": "Desktop Agenda",
-  "description": "A beautiful desktop todo widget for Übersicht with priority, due date, section management, and sub-task support.",
+  "description": "A sleek todo widget for Übersicht with priority indicators, smart due dates, progress tracking, and section management. Pure CoffeeScript — no Python required.",
   "author": "Maiwulanjiang Maiming",
   "email": "mawlan.momin@gmail.com"
 }

@@ -1,10 +1,10 @@
 #  Author: Maiwulanjiang Maiming
 #  Email: mawlan.momin@gmail.com
+#
+#  Desktop Agenda - A beautiful todo widget for Übersicht
+#  Pure CoffeeScript implementation - no Python required!
 
-# This widget requires the companion Python script todo_helper.py to function.
-# Place todo_helper.py in the same directory as this widget file.
-
-command: "/usr/bin/python3 todo_helper.py list"
+command: "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
 
 refreshFrequency: 60000
 
@@ -12,38 +12,38 @@ style: """
   bottom: 73px
   left: 20px
   width: 300px
-  height: 300px
+  height: 340px
   overflow: hidden
   overflow-x: hidden
   display: flex
   flex-direction: column
   
-  font-family: "Avenir Next", "Helvetica Neue", "Segoe UI", sans-serif
+  font-family: -apple-system, "SF Pro Display", "Avenir Next", "Helvetica Neue", sans-serif
   font-weight: 400
   color: #fff
+  -webkit-font-smoothing: antialiased
   
-  background: rgba(30, 30, 30, 0.65)
-  isolation: isolate
-  border-radius: 10px
-  border: 1px solid rgba(255, 255, 255, 0.1)
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4)
+  background: rgba(30, 30, 35, 0.55)
+  border-radius: 14px
+  border: 1px solid rgba(255, 255, 255, 0.08)
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)
   
-  padding: 10px
+  padding: 12px
   box-sizing: border-box
 
   @keyframes fadeIn
     from
       opacity: 0
-      transform: translateY(-4px)
+      transform: translateY(-6px)
     to
       opacity: 1
       transform: translateY(0)
   
   @keyframes checkPop
     0%
-      transform: scale(0.8)
+      transform: scale(0.6)
     50%
-      transform: scale(1.2)
+      transform: scale(1.25)
     100%
       transform: scale(1)
   
@@ -51,124 +51,204 @@ style: """
     0%, 100%
       opacity: 1
     50%
-      opacity: 0.6
+      opacity: 0.5
+
+  @keyframes shimmer
+    0%
+      background-position: -200px 0
+    100%
+      background-position: 200px 0
+
+  @keyframes slideIn
+    from
+      opacity: 0
+      transform: translateX(-8px)
+    to
+      opacity: 1
+      transform: translateX(0)
 
   ::-webkit-scrollbar
-    width: 4px
+    width: 3px
   ::-webkit-scrollbar-track
     background: transparent
   ::-webkit-scrollbar-thumb
-    background: rgba(255, 255, 255, 0.2)
-    border-radius: 2px
+    background: rgba(255, 255, 255, 0.15)
+    border-radius: 3px
   ::-webkit-scrollbar-thumb:hover
-    background: rgba(255, 255, 255, 0.3)
+    background: rgba(255, 255, 255, 0.25)
 
-  h1
-    font-family: "Gill Sans", "Avenir Next", sans-serif
-    margin: 0 0 10px 0
-    font-size: 16px
-    font-weight: 600
-    text-transform: uppercase
-    letter-spacing: 1px
-    color: rgba(255, 255, 255, 0.8)
+  .header
     display: flex
     justify-content: space-between
     align-items: center
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1)
-    padding-bottom: 6px
+    margin-bottom: 10px
+    padding-bottom: 8px
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06)
 
-  .title-actions
+  .header-left
     display: flex
     align-items: center
-    gap: 6px
+    gap: 8px
 
-  .refresh-btn
-    font-size: 12px
-    opacity: 0.65
-    cursor: pointer
-    transition: all 0.2s ease
-
-  .add-section-btn
+  .header-icon
     font-size: 14px
-    opacity: 0.75
-    cursor: pointer
-    transition: all 0.2s ease
+    opacity: 0.8
 
-  .open-file-btn
-    font-size: 12px
-    opacity: 0.7
-    cursor: pointer
-    transition: all 0.2s ease
+  h1
+    font-family: -apple-system, "SF Pro Display", sans-serif
+    margin: 0
+    font-size: 15px
+    font-weight: 600
+    letter-spacing: 0.3px
+    color: rgba(255, 255, 255, 0.92)
 
-  .refresh-btn:hover, .add-section-btn:hover, .open-file-btn:hover
+  .header-actions
+    display: flex
+    align-items: center
+    gap: 4px
+
+  .action-btn
+    width: 22px
+    height: 22px
+    display: flex
+    align-items: center
+    justify-content: center
+    border-radius: 6px
+    cursor: pointer
+    transition: all 0.15s ease
+    opacity: 0.5
+    font-size: 11px
+
+  .action-btn:hover
     opacity: 1
-    transform: scale(1.1)
+    background: rgba(255, 255, 255, 0.08)
+
+  .action-btn:active
+    transform: scale(0.9)
+
+  .stats-bar
+    display: flex
+    gap: 6px
+    margin-bottom: 8px
+    padding-bottom: 8px
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04)
+
+  .stat
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.4)
+    display: flex
+    align-items: center
+    gap: 3px
+
+  .stat-dot
+    width: 5px
+    height: 5px
+    border-radius: 50%
+
+  .stat-dot.active
+    background: #66ccff
+
+  .stat-dot.done
+    background: rgba(255, 255, 255, 0.25)
+
+  .stat-dot.overdue
+    background: #ff5f5f
+
+  .progress-track
+    height: 2px
+    background: rgba(255, 255, 255, 0.06)
+    border-radius: 1px
+    margin-bottom: 8px
+    overflow: hidden
+
+  .progress-fill
+    height: 100%
+    background: linear-gradient(90deg, #66ccff, #6dd382)
+    border-radius: 1px
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1)
 
   #todo-content
     overflow-y: auto
     overflow-x: hidden
-    height: calc(300px - 46px)
+    height: calc(340px - 100px)
 
   .section
-    margin-bottom: 10px
+    margin-bottom: 8px
     animation: fadeIn 0.3s ease
 
-  h2
-    margin: 0 0 4px 0
-    font-size: 14px
-    font-weight: 600
-    color: #ffd700
+  .section-header
     display: flex
     justify-content: space-between
     align-items: center
+    padding: 3px 4px
+    margin-bottom: 2px
+    border-radius: 4px
+    transition: background 0.15s ease
+
+  .section-header:hover
+    background: rgba(255, 255, 255, 0.03)
+
+  .section-left
+    display: flex
+    align-items: center
+    gap: 6px
+    min-width: 0
+    flex: 1
+
+  .section-dot
+    width: 6px
+    height: 6px
+    border-radius: 50%
+    background: #ffd700
+    flex-shrink: 0
 
   .section-title
-    min-width: 0
+    font-size: 12px
+    font-weight: 600
+    color: rgba(255, 255, 255, 0.7)
+    text-transform: uppercase
+    letter-spacing: 0.5px
     overflow: hidden
     text-overflow: ellipsis
     white-space: nowrap
+
+  .section-count
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.3)
+    flex-shrink: 0
+    min-width: 14px
+    text-align: center
 
   .section-actions
     display: inline-flex
     align-items: center
     gap: 1px
-
-  .add-btn
-    cursor: pointer
     opacity: 0
-    transition: all 0.2s ease
-    font-size: 14px
-    padding: 0 2px
-    width: 16px
-    text-align: center
+    transition: opacity 0.15s ease
 
-  .clear-btn
-    cursor: pointer
-    opacity: 0
-    transition: all 0.2s ease
-    font-size: 14px
-    padding: 0 2px
-    width: 16px
-    text-align: center
-
-  .delete-section-btn
-    cursor: pointer
-    opacity: 0
-    transition: all 0.2s ease
-    font-size: 13px
-    color: #ff8585
-    padding: 0 2px
-    width: 16px
-    text-align: center
-  
-  h2:hover .add-btn
+  .section-header:hover .section-actions
     opacity: 1
 
-  h2:hover .clear-btn
-    opacity: 1
+  .sec-btn
+    cursor: pointer
+    padding: 0 3px
+    font-size: 12px
+    transition: all 0.15s ease
+    border-radius: 3px
+    line-height: 16px
 
-  h2:hover .delete-section-btn
-    opacity: 1
+  .sec-btn:hover
+    background: rgba(255, 255, 255, 0.08)
+
+  .sec-btn.add-btn
+    color: rgba(255, 255, 255, 0.5)
+
+  .sec-btn.clear-btn
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.4)
+
+  .sec-btn.delete-section-btn
+    color: rgba(255, 130, 130, 0.6)
 
   ul
     margin: 0
@@ -179,66 +259,65 @@ style: """
     position: relative
     display: flex
     align-items: flex-start
-    padding: 2px 0
-    font-size: 14px
-    line-height: 1.3
-    color: rgba(255, 255, 255, 0.9)
-    transition: all 0.2s ease
-    animation: fadeIn 0.25s ease
+    padding: 3px 4px
+    font-size: 13px
+    line-height: 1.35
+    color: rgba(255, 255, 255, 0.88)
+    transition: all 0.15s ease
+    animation: slideIn 0.2s ease
+    border-radius: 5px
 
   li:hover
-    background: rgba(255, 255, 255, 0.05)
-    border-radius: 4px
-    margin: 0 -4px
-    padding: 2px 4px
+    background: rgba(255, 255, 255, 0.04)
 
-  .priority-indicator
-    width: 3px
-    height: 14px
-    border-radius: 2px
-    margin-right: 6px
-    margin-top: 2px
+  .priority-bar
+    width: 2px
+    height: 16px
+    border-radius: 1px
+    margin-right: 8px
+    margin-top: 3px
     flex-shrink: 0
     transition: all 0.2s ease
 
-  .priority-indicator.priority-high
+  .priority-bar.high
     background: linear-gradient(180deg, #ff5f5f, #ff8585)
-    box-shadow: 0 0 6px rgba(255, 95, 95, 0.5)
+    box-shadow: 0 0 8px rgba(255, 95, 95, 0.4)
 
-  .priority-indicator.priority-medium
+  .priority-bar.medium
     background: linear-gradient(180deg, #ffce54, #ffd98a)
 
-  .priority-indicator.priority-low
+  .priority-bar.low
     background: linear-gradient(180deg, #6dd382, #9de9af)
 
-  .priority-indicator.priority-none
+  .priority-bar.none
     background: transparent
 
   .checkbox
-    width: 12px
-    height: 12px
-    border: 1px solid rgba(255, 255, 255, 0.4)
-    border-radius: 3px
+    width: 13px
+    height: 13px
+    border: 1.5px solid rgba(255, 255, 255, 0.25)
+    border-radius: 4px
     margin-right: 8px
     margin-top: 2px
     cursor: pointer
     flex-shrink: 0
-    transition: all 0.2s ease
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1)
     position: relative
 
   .checkbox:hover
     border-color: #66ccff
-    transform: scale(1.1)
+    background: rgba(102, 204, 255, 0.08)
+    transform: scale(1.08)
 
   li.completed .checkbox
     background: #66ccff
     border-color: #66ccff
-    animation: checkPop 0.3s ease
+    animation: checkPop 0.35s cubic-bezier(0.4, 0, 0.2, 1)
 
   li.completed .checkbox:after
     content: ''
     position: absolute
-    left: 3px
+    left: 3.5px
     top: 1px
     width: 3px
     height: 6px
@@ -246,103 +325,117 @@ style: """
     border-width: 0 1.5px 1.5px 0
     transform: rotate(45deg)
 
-  li.completed .text
+  li.completed .task-text
     text-decoration: line-through
-    color: rgba(255, 255, 255, 0.4)
+    color: rgba(255, 255, 255, 0.3)
 
-  .text
-    flex-grow: 1
-    word-break: break-word
-    cursor: pointer
-
-  .text-wrap
-    flex-grow: 1
+  .task-body
+    flex: 1
     min-width: 0
 
-  .meta
+  .task-text
+    word-break: break-word
+    cursor: pointer
+    transition: color 0.15s ease
+
+  .task-text:hover
+    color: rgba(255, 255, 255, 1)
+
+  .task-meta
     margin-top: 2px
     display: flex
     gap: 4px
     flex-wrap: wrap
 
-  .badge
+  .tag
     font-size: 9px
     line-height: 1
-    padding: 2px 5px
-    border-radius: 8px
-    background: rgba(255, 255, 255, 0.12)
-    color: rgba(255, 255, 255, 0.78)
-    transition: all 0.2s ease
+    padding: 2px 6px
+    border-radius: 6px
+    background: rgba(255, 255, 255, 0.06)
+    color: rgba(255, 255, 255, 0.5)
+    transition: all 0.15s ease
 
-  .badge.due-overdue
-    background: rgba(255, 92, 92, 0.25)
+  .tag.overdue
+    background: rgba(255, 92, 92, 0.18)
     color: #ff9d9d
     animation: pulse 2s infinite
 
-  .badge.due-today
-    background: rgba(255, 159, 67, 0.25)
+  .tag.today
+    background: rgba(255, 159, 67, 0.18)
     color: #ffb380
 
-  .badge.due-tomorrow
-    background: rgba(255, 206, 84, 0.22)
+  .tag.tomorrow
+    background: rgba(255, 206, 84, 0.18)
     color: #ffd98a
 
-  .badge.due-soon
-    background: rgba(102, 204, 255, 0.22)
+  .tag.soon
+    background: rgba(102, 204, 255, 0.18)
     color: #99ddff
 
-  li.parent-task .text
-    font-weight: 500
-
-  li.sub-task .text
+  li.sub-task .task-text
     font-size: 12px
-    color: rgba(255, 255, 255, 0.72)
+    color: rgba(255, 255, 255, 0.6)
 
   li.sub-task .checkbox
-    width: 10px
-    height: 10px
+    width: 11px
+    height: 11px
     margin-top: 3px
 
-  li.sub-task .priority-indicator
-    height: 10px
-    margin-top: 3px
+  li.sub-task .priority-bar
+    height: 11px
+    margin-top: 4px
 
-  .delete-btn
+  .task-actions
+    display: flex
+    align-items: center
+    gap: 2px
     opacity: 0
-    cursor: pointer
-    color: #ff4d4d
-    margin-left: 6px
-    font-weight: bold
-    font-size: 14px
-    line-height: 12px
-    transition: all 0.2s ease
-  
-  li:hover .delete-btn
+    transition: opacity 0.15s ease
+    margin-left: 4px
+    flex-shrink: 0
+
+  li:hover .task-actions
     opacity: 1
 
-  .delete-btn:hover
-    transform: scale(1.2)
-
-  .add-sub-btn
-    opacity: 0
+  .task-btn
     cursor: pointer
-    color: #66ccff
-    margin-left: 6px
-    font-weight: bold
-    font-size: 13px
-    line-height: 12px
-    transition: all 0.2s ease
-
-  li:hover .add-sub-btn
-    opacity: 1
-
-  .add-sub-btn:hover
-    transform: scale(1.2)
-
-  .section-empty
-    opacity: 0.45
+    padding: 0 2px
     font-size: 12px
-    padding: 2px 0 4px 20px
+    line-height: 14px
+    border-radius: 3px
+    transition: all 0.15s ease
+
+  .task-btn:hover
+    transform: scale(1.15)
+
+  .task-btn.add-sub-btn
+    color: rgba(102, 204, 255, 0.6)
+
+  .task-btn.delete-btn
+    color: rgba(255, 77, 77, 0.5)
+
+  .empty-section
+    opacity: 0.3
+    font-size: 11px
+    padding: 2px 0 2px 22px
+    font-style: italic
+
+  .empty-state
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    padding: 30px 20px
+    opacity: 0.4
+
+  .empty-state-icon
+    font-size: 24px
+    margin-bottom: 8px
+
+  .empty-state-text
+    font-size: 12px
+    text-align: center
 
   .error
     color: #ff4d4d
@@ -351,85 +444,203 @@ style: """
 
 render: -> """
   <div class="todo-container">
-    <h1>
-      <span>Agenda</span>
-      <span class="title-actions">
-        <span class="add-section-btn" title="Add category">＋</span>
-        <span class="open-file-btn" title="Open todo.txt">📄</span>
-        <span class="refresh-btn" title="Refresh">↻</span>
-      </span>
-    </h1>
+    <div class="header">
+      <div class="header-left">
+        <span class="header-icon">✦</span>
+        <h1>Agenda</h1>
+      </div>
+      <div class="header-actions">
+        <span class="action-btn add-section-btn" title="Add category">＋</span>
+        <span class="action-btn open-file-btn" title="Open todo.txt">📄</span>
+        <span class="action-btn refresh-btn" title="Refresh">↻</span>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <span class="stat"><span class="stat-dot active"></span><span id="stat-active">0</span></span>
+      <span class="stat"><span class="stat-dot done"></span><span id="stat-done">0</span></span>
+      <span class="stat"><span class="stat-dot overdue"></span><span id="stat-overdue">0</span></span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
     <div id="todo-content">Loading...</div>
   </div>
 """
 
-renderOutput: (output, domEl) ->
+DELIMITER: '=========='
+
+_cachedContent: null
+
+escapeHtml: (value) ->
+  String(value ? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+
+formatDueDate: (dueStr) ->
+  return {text: "", status: "", days: null} unless dueStr
   try
-    if output.trim().startsWith("Traceback") or output.trim().length == 0
-      $(domEl).find('#todo-content').html("<div class='error'>Error loading tasks.</div>")
-      return
+    parts = dueStr.split('-')
+    return {text: dueStr, status: "unknown", days: null} if parts.length != 3
+    year = parseInt(parts[0])
+    month = parseInt(parts[1]) - 1
+    day = parseInt(parts[2])
+    dueDate = new Date(year, month, day)
+    today = new Date()
+    today.setHours(0, 0, 0, 0)
+    dueDate.setHours(0, 0, 0, 0)
+    delta = Math.round((dueDate - today) / 86400000)
+    if delta < 0
+      {text: "已过期 #{-delta}天", status: "overdue", days: delta}
+    else if delta == 0
+      {text: "今天", status: "today", days: 0}
+    else if delta == 1
+      {text: "明天", status: "tomorrow", days: 1}
+    else if delta <= 7
+      {text: "#{delta}天后", status: "soon", days: delta}
+    else
+      {text: dueStr, status: "future", days: delta}
+  catch
+    {text: dueStr, status: "unknown", days: null}
 
-    data = JSON.parse(output)
+parseTaskLine: (line) ->
+  indent = line.length - line.trimLeft().length
+  stripped = line.trim()
+  completed = false
+  if stripped.startsWith('-')
+    completed = true
+    stripped = stripped.substring(1).trim()
+  if stripped.startsWith('·')
+    stripped = stripped.substring(1).trim()
+  parts = stripped.split('|').map (p) -> p.trim()
+  text = parts[0] || ""
+  priority = ""
+  due = ""
+  for token in parts.slice(1)
+    if token.startsWith('p:')
+      val = token.substring(2).toLowerCase()
+      priority = val if val in ['high', 'medium', 'low']
+    else if token.startsWith('d:')
+      due = token.substring(2)
+  dueInfo = @formatDueDate(due)
+  {indent, completed, text, priority, due, dueInfo}
+
+parseTodo: (content) ->
+  return {sections: [], activeCount: 0, doneCount: 0, overdueCount: 0} unless content
+  lines = content.split('\n')
+  delimiterCount = 0
+  startIndex = 0
+  if lines.length > 0 and lines[0].trim() == @DELIMITER
+    delimiterCount++
+  for line, i in lines
+    continue if i == 0 and line.trim() == @DELIMITER
+    if line.trim() == @DELIMITER
+      delimiterCount++
+      if delimiterCount >= 2
+        startIndex = i + 1
+        break
+  contentLines = lines.slice(startIndex)
+  currentSection = null
+  sections = []
+  doneTasks = []
+  hasHeader = false
+  activeCount = 0
+  overdueCount = 0
+  for line, i in contentLines
+    originalLineNum = startIndex + i
+    stripped = line.trim()
+    continue unless stripped
+    if stripped.startsWith('#')
+      hasHeader = true
+      if currentSection?
+        sections.push(currentSection)
+      title = stripped.replace(/^#+/, '').trim()
+      currentSection = {title, deletable: true, tasks: []}
+    else
+      if !currentSection?
+        currentSection = {title: "Inbox", deletable: false, tasks: [], _implicit: true}
+      task = @parseTaskLine(line)
+      task.id = originalLineNum
+      task.section = currentSection.title
+      if task.completed
+        doneTasks.push(task)
+      else
+        activeCount++
+        overdueCount++ if task.dueInfo?.status == 'overdue'
+        currentSection.tasks.push(task)
+  if currentSection?
+    sections.push(currentSection)
+  if sections.length > 0 and sections[0]._implicit and sections[0].tasks.length == 0 and hasHeader
+    sections.shift()
+  doneCount = doneTasks.length
+  if doneTasks.length > 0
+    sections.push({title: "Done", deletable: false, tasks: doneTasks, allow_add: false, clearable: true})
+  {sections, activeCount, doneCount, overdueCount}
+
+renderOutput: (content, domEl) ->
+  try
+    data = @parseTodo(content)
+    total = data.activeCount + data.doneCount
+    progress = if total > 0 then Math.round(data.doneCount / total * 100) else 0
+    
+    $(domEl).find('#stat-active').text(data.activeCount)
+    $(domEl).find('#stat-done').text(data.doneCount)
+    $(domEl).find('#stat-overdue').text(data.overdueCount) if data.overdueCount > 0
+    $(domEl).find('#progress-fill').css('width', progress + '%')
+    
     html = ""
-
-    escapeHtml = (value) ->
-      String(value ? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;")
-    
-    escapeAttr = (value) ->
-      escapeHtml(value)
-    
     if data.sections.length == 0
-      html = "<div style='opacity: 0.5; text-align: center; padding: 20px;'>No tasks found</div>"
+      html = "<div class='empty-state'><div class='empty-state-icon'>✎</div><div class='empty-state-text'>Add your first task</div></div>"
     
     for section in data.sections
-      actions = ""
       sectionTitle = section.title ? ""
+      taskCount = if section.tasks then section.tasks.length else 0
+      
+      actions = ""
       if section.allow_add != false
-        actions += "<span class='add-btn' title='Add task to #{escapeAttr(sectionTitle)}' data-section='#{escapeAttr(sectionTitle)}'>+</span>"
+        actions += "<span class='sec-btn add-btn' title='Add task' data-section='#{@escapeHtml(sectionTitle)}'>+</span>"
       if section.clearable
-        actions += "<span class='clear-btn' title='Clear done tasks'>🆑</span>"
+        actions += "<span class='sec-btn clear-btn' title='Clear done'>🆑</span>"
       if section.deletable != false
-        actions += "<span class='delete-section-btn' title='Delete category' data-section='#{escapeAttr(sectionTitle)}'>×</span>"
-
+        actions += "<span class='sec-btn delete-section-btn' title='Delete' data-section='#{@escapeHtml(sectionTitle)}'>×</span>"
+      
       html += "<div class='section'>"
-      html += "<h2><span class='section-title'>#{escapeHtml(sectionTitle)}</span><span class='section-actions'>#{actions}</span></h2>"
+      html += "<div class='section-header'>"
+      html += "<div class='section-left'><span class='section-dot'></span><span class='section-title'>#{@escapeHtml(sectionTitle)}</span><span class='section-count'>#{taskCount}</span></div>"
+      html += "<span class='section-actions'>#{actions}</span>"
+      html += "</div>"
       html += "<ul>"
-      if !section.tasks or section.tasks.length == 0
-        html += "<li class='section-empty'>No tasks</li>"
+      
+      if taskCount == 0
+        html += "<li class='empty-section'>empty</li>"
+      
       for task in section.tasks
         completedClass = if task.completed then "completed" else ""
         priority = task.priority ? ""
-        priorityClass = if priority then "priority-#{priority}" else "priority-none"
-        level = Math.max(0, Math.floor(parseInt(task.indent ? 0, 10) / 2))
-        indentPx = level * 12
+        priorityClass = if priority then priority else "none"
+        level = Math.max(0, Math.floor((task.indent ? 0) / 2))
+        indentPx = level * 14
         taskTypeClass = if level > 0 then "sub-task" else "parent-task"
-        taskText = task.text ? ""
-        taskDue = task.due ? ""
-        taskDueInfo = task.dueInfo ? {}
-        taskSection = task.section ? sectionTitle
         
         dueHtml = ""
-        if taskDueInfo.text and taskDueInfo.text.length > 0
-          dueStatus = taskDueInfo.status ? ""
-          dueHtml = "<span class='badge due-#{escapeAttr(dueStatus)}'>#{escapeHtml(taskDueInfo.text)}</span>"
-
-        html += "<li class='task-item #{taskTypeClass} #{completedClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{escapeAttr(priority)}' data-due='#{escapeAttr(taskDue)}' data-section='#{escapeAttr(taskSection)}' style='margin-left: #{indentPx}px'>"
-        html += "<div class='priority-indicator #{priorityClass}' title='Priority: #{if priority then priority else 'none'}'></div>"
+        if task.dueInfo?.text
+          dueStatus = task.dueInfo.status ? ""
+          dueHtml = "<span class='tag #{@escapeHtml(dueStatus)}'>#{@escapeHtml(task.dueInfo.text)}</span>"
+        
+        html += "<li class='task-item #{taskTypeClass} #{completedClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{@escapeHtml(priority)}' data-due='#{@escapeHtml(task.due ? "")}' data-section='#{@escapeHtml(task.section ? sectionTitle)}' style='margin-left: #{indentPx}px'>"
+        html += "<div class='priority-bar #{priorityClass}'></div>"
         html += "<div class='checkbox'></div>"
-        html += "<div class='text-wrap'>"
-        html += "<div class='text edit-task-btn' title='Edit task'>#{escapeHtml(taskText)}</div>"
-        html += "<div class='meta'>#{dueHtml}</div>"
+        html += "<div class='task-body'>"
+        html += "<div class='task-text edit-task-btn'>#{@escapeHtml(task.text)}</div>"
+        html += "<div class='task-meta'>#{dueHtml}</div>"
         html += "</div>"
-        html += "<div class='add-sub-btn' title='Add sub-task'>+</div>"
-        html += "<div class='delete-btn' title='Delete'>×</div>"
+        html += "<div class='task-actions'>"
+        html += "<span class='task-btn add-sub-btn' title='Sub-task'>+</span>"
+        html += "<span class='task-btn delete-btn' title='Delete'>×</span>"
+        html += "</div>"
         html += "</li>"
-      html += "</ul>"
-      html += "</div>"
+      
+      html += "</ul></div>"
     
     $(domEl).find('#todo-content').html(html)
   catch e
@@ -437,75 +648,139 @@ renderOutput: (output, domEl) ->
     console.error(e)
 
 update: (output, domEl) ->
+  @_cachedContent = output
   @renderOutput(output, domEl)
 
+saveAndRefresh: (content, domEl) ->
+  @_cachedContent = content
+  @renderOutput(content, domEl)
+  safeContent = content.replace(/'/g, "'\\''")
+  @run "echo '#{safeContent}' > \"$HOME/Documents/todo.txt\""
+
+getCachedLines: ->
+  (@_cachedContent ? "").split('\n')
+
+toggleLine: (lines, lineNum) ->
+  return lines unless 0 <= lineNum < lines.length
+  line = lines[lineNum]
+  stripped = line.trim()
+  return lines if stripped.startsWith('#') or stripped == @DELIMITER
+  indent = line.length - line.trimLeft().length
+  prefix = line.substring(0, indent)
+  content = line.substring(indent)
+  if content.startsWith('- ')
+    newContent = content.substring(2)
+  else if content.startsWith('-')
+    newContent = content.substring(1).trimLeft()
+  else
+    newContent = '- ' + content.trimLeft()
+  if !newContent.endsWith('\n')
+    newContent += '\n'
+  lines[lineNum] = prefix + newContent
+  lines
+
+deleteLine: (lines, lineNum) ->
+  return lines unless 0 <= lineNum < lines.length
+  lines.slice(0, lineNum).concat(lines.slice(lineNum + 1))
+
+findSectionBounds: (lines, sectionTitle) ->
+  target = sectionTitle.trim()
+  for line, i in lines
+    stripped = line.trim()
+    continue unless stripped.startsWith('#')
+    title = stripped.replace(/^#+/, '').trim()
+    if title == target
+      nextHeader = lines.length
+      for j in [i + 1...lines.length]
+        if lines[j].trim().startsWith('#')
+          nextHeader = j
+          break
+      return [i, nextHeader]
+  null
+
 afterRender: (domEl) ->
-  helperPath = "todo_helper.py"
-  pythonCmd = "/usr/bin/python3"
-
-  escapeForAppleScript = (text) ->
-    String(text).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")
-
-  shellEscape = (text) ->
-    String(text ? "").replace(/'/g, "'\\''")
-
   refreshData = =>
-    @run "#{pythonCmd} #{helperPath} list", (err, output) =>
-      if !err && output
+    @run "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''", (err, output) =>
+      if !err && output?
+        @_cachedContent = output
         @renderOutput(output, domEl)
 
   showInputDialog = (titleText, promptText, defaultValue, callback) =>
-    safeTitle = escapeForAppleScript(titleText)
-    safePrompt = escapeForAppleScript(promptText)
-    safeDefault = escapeForAppleScript(defaultValue ? "")
-    script = """
-    osascript -e 'tell application "Finder" to activate' -e 'tell application "Finder" to display dialog "#{safePrompt}" default answer "#{safeDefault}" with title "#{safeTitle}"' -e 'text returned of result'
-    """
+    safeTitle = titleText.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")
+    safePrompt = promptText.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")
+    safeDefault = (defaultValue ? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")
+    script = "osascript -e 'tell application \"Finder\" to activate' -e 'tell application \"Finder\" to display dialog \"#{safePrompt}\" default answer \"#{safeDefault}\" with title \"#{safeTitle}\"' -e 'text returned of result'"
     @run script, callback
-  
+
   $(domEl).on 'click', '.checkbox', (e) =>
     e.stopPropagation()
     id = $(e.currentTarget).closest('.task-item').data('id')
-    @run "#{pythonCmd} #{helperPath} toggle #{id}", (err, output) =>
-      if !err && output
-        @renderOutput(output, domEl)
+    lines = @getCachedLines()
+    lines = @toggleLine(lines, id)
+    @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.delete-btn', (e) =>
     e.stopPropagation()
     id = $(e.currentTarget).closest('.task-item').data('id')
-    @run "#{pythonCmd} #{helperPath} delete #{id}", (err, output) =>
-      if !err && output
-        @renderOutput(output, domEl)
+    lines = @getCachedLines()
+    lines = @deleteLine(lines, id)
+    @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.add-btn', (e) =>
     e.stopPropagation()
     section = $(e.currentTarget).data('section')
-
     showInputDialog "New Task", "Add task to #{section}:", "", (err, output) =>
-      if !err && output
-        taskText = output.trim()
-        if taskText.length > 0
-          safeTask = shellEscape(taskText)
-          safeSectionArg = shellEscape(section)
-          
-          @run "#{pythonCmd} #{helperPath} add '#{safeSectionArg}' '#{safeTask}'", (addErr, addOutput) =>
-            if !addErr && addOutput
-              @renderOutput(addOutput, domEl)
+      return if err or !output
+      taskText = output.trim()
+      return if taskText.length == 0
+      lines = @getCachedLines()
+      targetHeader = "# #{section}"
+      insertIndex = lines.length
+      sectionFound = false
+      for line, i in lines
+        if line.trim() == targetHeader
+          sectionFound = true
+          for j in [i + 1...lines.length]
+            if lines[j].trim().startsWith('#') and lines[j].trim() != @DELIMITER
+              insertIndex = j
+              break
+          break
+      newLine = "· #{taskText}\n"
+      if sectionFound
+        lines.splice(insertIndex, 0, newLine)
+      else
+        if lines.length > 0 and lines[lines.length - 1].trim() != ""
+          lines.push("")
+        lines.push("")
+        lines.push(targetHeader)
+        lines.push(newLine)
+      @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.add-sub-btn', (e) =>
     e.stopPropagation()
     taskEl = $(e.currentTarget).closest('.task-item')
     id = taskEl.data('id')
-    parentText = taskEl.find('.text').text()
-
+    parentText = taskEl.find('.task-text').text()
     showInputDialog "New Sub-task", "Add note under #{parentText}:", "", (err, output) =>
-      if !err && output
-        taskText = output.trim()
-        if taskText.length > 0
-          safeTask = shellEscape(taskText)
-          @run "#{pythonCmd} #{helperPath} add_subtask #{id} '#{safeTask}'", (addErr, addOutput) =>
-            if !addErr && addOutput
-              @renderOutput(addOutput, domEl)
+      return if err or !output
+      taskText = output.trim()
+      return if taskText.length == 0
+      lines = @getCachedLines()
+      return if id < 0 or id >= lines.length
+      parentLine = lines[id]
+      parentIndent = parentLine.length - parentLine.trimLeft().length
+      childIndent = parentIndent + 2
+      insertIndex = id + 1
+      while insertIndex < lines.length
+        candidate = lines[insertIndex]
+        candidateStripped = candidate.trim()
+        break if candidateStripped.startsWith('#') or candidateStripped == @DELIMITER
+        candidateIndent = candidate.length - candidate.trimLeft().length
+        break if candidateIndent <= parentIndent
+        insertIndex++
+      newLine = " ".repeat(childIndent) + "· #{taskText}\n"
+      lines.splice(insertIndex, 0, newLine)
+      @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.edit-task-btn', (e) =>
     e.stopPropagation()
@@ -515,56 +790,61 @@ afterRender: (domEl) ->
     currentPriority = String(taskEl.data('priority') ? "").trim()
     currentDue = String(taskEl.data('due') ? "").trim()
     currentSection = String(taskEl.data('section') ? "").trim()
-
     showInputDialog "Edit Task", "Task content:", currentText, (err1, out1) =>
-      if err1 or !out1
-        return
+      return if err1 or !out1
       nextText = out1.trim()
-      if nextText.length == 0
-        return
-
-      showInputDialog "Edit Task", "Priority (high / medium / low, empty = none):", currentPriority, (err2, out2) =>
-        if err2 or !out2
-          return
+      return if nextText.length == 0
+      showInputDialog "Edit Task", "Priority (high/medium/low):", currentPriority, (err2, out2) =>
+        return if err2 or !out2
         nextPriority = out2.trim().toLowerCase()
-        if ["high", "medium", "low"].indexOf(nextPriority) == -1
-          nextPriority = ""
-
-        showInputDialog "Edit Task", "Due date (YYYY-MM-DD, empty = none):", currentDue, (err3, out3) =>
-          if err3 or !out3
-            return
+        nextPriority = "" unless nextPriority in ['high', 'medium', 'low']
+        showInputDialog "Edit Task", "Due date (YYYY-MM-DD):", currentDue, (err3, out3) =>
+          return if err3 or !out3
           nextDue = out3.trim()
-
           showInputDialog "Edit Task", "Category:", currentSection, (err4, out4) =>
-            if err4 or !out4
-              return
+            return if err4 or !out4
             nextSection = out4.trim()
-            if nextSection.length == 0
-              nextSection = currentSection
-
-            safeText = shellEscape(nextText)
-            safePriority = shellEscape(nextPriority)
-            safeDue = shellEscape(nextDue)
-            safeSection = shellEscape(nextSection)
-            @run "#{pythonCmd} #{helperPath} edit #{id} '#{safeText}' '#{safePriority}' '#{safeDue}' '#{safeSection}'", (editErr, editOutput) =>
-              if !editErr && editOutput
-                @renderOutput(editOutput, domEl)
+            nextSection = currentSection if nextSection.length == 0
+            lines = @getCachedLines()
+            return if id < 0 or id >= lines.length
+            line = lines[id]
+            stripped = line.trim()
+            return if stripped.startsWith('#') or stripped == @DELIMITER
+            indent = line.length - line.trimLeft().length
+            completed = stripped.startsWith('-')
+            metadata = []
+            if nextPriority
+              metadata.push("p:#{nextPriority}")
+            if nextDue
+              metadata.push("d:#{nextDue}")
+            body = "· #{nextText}"
+            if metadata.length > 0
+              body += " |" + metadata.join(" |")
+            prefix = " ".repeat(indent)
+            if completed
+              lines[id] = "#{prefix}- #{body}\n"
+            else
+              lines[id] = "#{prefix}#{body}\n"
+            @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.clear-btn', (e) =>
     e.stopPropagation()
-    @run "#{pythonCmd} #{helperPath} clear_done", (err, output) =>
-      if !err && output
-        @renderOutput(output, domEl)
+    lines = @getCachedLines()
+    filtered = lines.filter (line) =>
+      stripped = line.trim()
+      !(stripped and !stripped.startsWith('#') and stripped.startsWith('-'))
+    @saveAndRefresh filtered.join('\n'), domEl
 
   $(domEl).on 'click', '.delete-section-btn', (e) =>
     e.stopPropagation()
     section = $(e.currentTarget).data('section')
-    if !section
-      return
-    safeSection = shellEscape(section)
-    @run "#{pythonCmd} #{helperPath} delete_section '#{safeSection}'", (err, output) =>
-      if !err && output
-        @renderOutput(output, domEl)
+    return unless section
+    lines = @getCachedLines()
+    bounds = @findSectionBounds(lines, section)
+    return unless bounds
+    [startIdx, endIdx] = bounds
+    lines = lines.slice(0, startIdx).concat(lines.slice(endIdx))
+    @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.refresh-btn', (e) =>
     e.stopPropagation()
@@ -572,16 +852,18 @@ afterRender: (domEl) ->
 
   $(domEl).on 'click', '.add-section-btn', (e) =>
     e.stopPropagation()
-    showInputDialog "New Category", "Category name:", "", (nameErr, nameOutput) =>
-      if nameErr or !nameOutput
-        return
-      sectionName = nameOutput.trim()
-      if sectionName.length == 0
-        return
-      safeName = shellEscape(sectionName)
-      @run "#{pythonCmd} #{helperPath} add_section '#{safeName}'", (addErr, addOutput) =>
-        if !addErr && addOutput
-          @renderOutput(addOutput, domEl)
+    showInputDialog "New Category", "Category name:", "", (err, output) =>
+      return if err or !output
+      sectionName = output.trim()
+      return if sectionName.length == 0
+      lines = @getCachedLines()
+      targetHeader = "# #{sectionName}"
+      for line in lines
+        return if line.trim() == targetHeader
+      if lines.length > 0 and lines[lines.length - 1].trim() != ""
+        lines.push("")
+      lines.push(targetHeader)
+      @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.open-file-btn', (e) =>
     e.stopPropagation()
