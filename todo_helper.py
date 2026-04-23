@@ -10,8 +10,9 @@
 import sys
 import json
 import os
+from datetime import datetime, date
 
-TODO_FILE = '/Users/rock/Documents/todo.txt'
+TODO_FILE = os.environ.get('TODO_FILE') or os.path.expanduser('~/Documents/todo.txt')
 DELIMITER = '=========='
 
 def read_lines():
@@ -49,6 +50,28 @@ def normalize_due(value):
     if not value:
         return ""
     return value.strip()
+
+def format_due_date(due_str):
+    if not due_str:
+        return {"text": "", "status": "", "days": None}
+    
+    try:
+        due_date = datetime.strptime(due_str, "%Y-%m-%d").date()
+        today = date.today()
+        delta = (due_date - today).days
+        
+        if delta < 0:
+            return {"text": f"已过期 {-delta} 天", "status": "overdue", "days": delta}
+        elif delta == 0:
+            return {"text": "今天", "status": "today", "days": 0}
+        elif delta == 1:
+            return {"text": "明天", "status": "tomorrow", "days": 1}
+        elif delta <= 7:
+            return {"text": f"{delta} 天后", "status": "soon", "days": delta}
+        else:
+            return {"text": due_str, "status": "future", "days": delta}
+    except ValueError:
+        return {"text": due_str, "status": "unknown", "days": None}
 
 def parse_section_header(line):
     stripped = line.strip()
@@ -197,12 +220,15 @@ def parse_todo():
                 current_section = {"title": "Inbox", "color": "", "deletable": False, "tasks": [], "_implicit": True}
 
             parsed_task = parse_task_line(line)
+            due_info = format_due_date(parsed_task["due"])
+            
             task = {
                 "id": original_line_num,
                 "text": parsed_task["text"],
                 "completed": parsed_task["completed"],
                 "priority": parsed_task["priority"],
                 "due": parsed_task["due"],
+                "dueInfo": due_info,
                 "section": current_section["title"],
                 "raw": stripped,
                 "indent": parsed_task["indent"]

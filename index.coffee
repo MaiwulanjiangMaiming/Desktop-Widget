@@ -2,9 +2,9 @@
 #  Email: mawlan.momin@gmail.com
 
 # This widget requires the companion Python script todo_helper.py to function.
-# Place todo_helper.py in the same directory or update the path in the command below.
+# Place todo_helper.py in the same directory as this widget file.
 
-command: "/usr/bin/python3 '/Users/rock/Library/Application Support/Übersicht/widgets/todo_helper.py' list"
+command: "/usr/bin/python3 todo_helper.py list"
 
 refreshFrequency: 60000
 
@@ -31,7 +31,28 @@ style: """
   padding: 10px
   box-sizing: border-box
 
-  /* Scrollbar */
+  @keyframes fadeIn
+    from
+      opacity: 0
+      transform: translateY(-4px)
+    to
+      opacity: 1
+      transform: translateY(0)
+  
+  @keyframes checkPop
+    0%
+      transform: scale(0.8)
+    50%
+      transform: scale(1.2)
+    100%
+      transform: scale(1)
+  
+  @keyframes pulse
+    0%, 100%
+      opacity: 1
+    50%
+      opacity: 0.6
+
   ::-webkit-scrollbar
     width: 4px
   ::-webkit-scrollbar-track
@@ -65,22 +86,23 @@ style: """
     font-size: 12px
     opacity: 0.65
     cursor: pointer
-    transition: opacity 0.2s
+    transition: all 0.2s ease
 
   .add-section-btn
     font-size: 14px
     opacity: 0.75
     cursor: pointer
-    transition: opacity 0.2s
+    transition: all 0.2s ease
 
   .open-file-btn
     font-size: 12px
     opacity: 0.7
     cursor: pointer
-    transition: opacity 0.2s
+    transition: all 0.2s ease
 
   .refresh-btn:hover, .add-section-btn:hover, .open-file-btn:hover
     opacity: 1
+    transform: scale(1.1)
 
   #todo-content
     overflow-y: auto
@@ -89,6 +111,7 @@ style: """
 
   .section
     margin-bottom: 10px
+    animation: fadeIn 0.3s ease
 
   h2
     margin: 0 0 4px 0
@@ -113,7 +136,7 @@ style: """
   .add-btn
     cursor: pointer
     opacity: 0
-    transition: opacity 0.2s
+    transition: all 0.2s ease
     font-size: 14px
     padding: 0 2px
     width: 16px
@@ -122,7 +145,7 @@ style: """
   .clear-btn
     cursor: pointer
     opacity: 0
-    transition: opacity 0.2s
+    transition: all 0.2s ease
     font-size: 14px
     padding: 0 2px
     width: 16px
@@ -131,7 +154,7 @@ style: """
   .delete-section-btn
     cursor: pointer
     opacity: 0
-    transition: opacity 0.2s
+    transition: all 0.2s ease
     font-size: 13px
     color: #ff8585
     padding: 0 2px
@@ -160,13 +183,36 @@ style: """
     font-size: 14px
     line-height: 1.3
     color: rgba(255, 255, 255, 0.9)
-    transition: all 0.2s
+    transition: all 0.2s ease
+    animation: fadeIn 0.25s ease
 
   li:hover
     background: rgba(255, 255, 255, 0.05)
     border-radius: 4px
     margin: 0 -4px
     padding: 2px 4px
+
+  .priority-indicator
+    width: 3px
+    height: 14px
+    border-radius: 2px
+    margin-right: 6px
+    margin-top: 2px
+    flex-shrink: 0
+    transition: all 0.2s ease
+
+  .priority-indicator.priority-high
+    background: linear-gradient(180deg, #ff5f5f, #ff8585)
+    box-shadow: 0 0 6px rgba(255, 95, 95, 0.5)
+
+  .priority-indicator.priority-medium
+    background: linear-gradient(180deg, #ffce54, #ffd98a)
+
+  .priority-indicator.priority-low
+    background: linear-gradient(180deg, #6dd382, #9de9af)
+
+  .priority-indicator.priority-none
+    background: transparent
 
   .checkbox
     width: 12px
@@ -177,15 +223,17 @@ style: """
     margin-top: 2px
     cursor: pointer
     flex-shrink: 0
-    transition: all 0.2s
+    transition: all 0.2s ease
     position: relative
 
   .checkbox:hover
     border-color: #66ccff
+    transform: scale(1.1)
 
   li.completed .checkbox
     background: #66ccff
     border-color: #66ccff
+    animation: checkPop 0.3s ease
 
   li.completed .checkbox:after
     content: ''
@@ -218,24 +266,30 @@ style: """
     flex-wrap: wrap
 
   .badge
-    font-size: 10px
+    font-size: 9px
     line-height: 1
     padding: 2px 5px
-    border-radius: 10px
+    border-radius: 8px
     background: rgba(255, 255, 255, 0.12)
     color: rgba(255, 255, 255, 0.78)
+    transition: all 0.2s ease
 
-  .badge.priority-high
-    background: rgba(255, 92, 92, 0.22)
+  .badge.due-overdue
+    background: rgba(255, 92, 92, 0.25)
     color: #ff9d9d
+    animation: pulse 2s infinite
 
-  .badge.priority-medium
+  .badge.due-today
+    background: rgba(255, 159, 67, 0.25)
+    color: #ffb380
+
+  .badge.due-tomorrow
     background: rgba(255, 206, 84, 0.22)
     color: #ffd98a
 
-  .badge.priority-low
-    background: rgba(109, 211, 130, 0.22)
-    color: #9de9af
+  .badge.due-soon
+    background: rgba(102, 204, 255, 0.22)
+    color: #99ddff
 
   li.parent-task .text
     font-weight: 500
@@ -249,6 +303,10 @@ style: """
     height: 10px
     margin-top: 3px
 
+  li.sub-task .priority-indicator
+    height: 10px
+    margin-top: 3px
+
   .delete-btn
     opacity: 0
     cursor: pointer
@@ -257,10 +315,13 @@ style: """
     font-weight: bold
     font-size: 14px
     line-height: 12px
-    transition: opacity 0.2s
+    transition: all 0.2s ease
   
   li:hover .delete-btn
     opacity: 1
+
+  .delete-btn:hover
+    transform: scale(1.2)
 
   .add-sub-btn
     opacity: 0
@@ -270,10 +331,13 @@ style: """
     font-weight: bold
     font-size: 13px
     line-height: 12px
-    transition: opacity 0.2s
+    transition: all 0.2s ease
 
   li:hover .add-sub-btn
     opacity: 1
+
+  .add-sub-btn:hover
+    transform: scale(1.2)
 
   .section-empty
     opacity: 0.45
@@ -339,25 +403,27 @@ renderOutput: (output, domEl) ->
         html += "<li class='section-empty'>No tasks</li>"
       for task in section.tasks
         completedClass = if task.completed then "completed" else ""
-        priorityClass = if task.priority then "priority-#{task.priority}" else ""
+        priority = task.priority ? ""
+        priorityClass = if priority then "priority-#{priority}" else "priority-none"
         level = Math.max(0, Math.floor(parseInt(task.indent ? 0, 10) / 2))
         indentPx = level * 12
         taskTypeClass = if level > 0 then "sub-task" else "parent-task"
         taskText = task.text ? ""
-        taskPriority = task.priority ? ""
         taskDue = task.due ? ""
+        taskDueInfo = task.dueInfo ? {}
         taskSection = task.section ? sectionTitle
-        metaHtml = ""
-        if taskPriority.length > 0
-          metaHtml += "<span class='badge #{priorityClass}'>P:#{escapeHtml(taskPriority)}</span>"
-        if taskDue.length > 0
-          metaHtml += "<span class='badge'>D:#{escapeHtml(taskDue)}</span>"
+        
+        dueHtml = ""
+        if taskDueInfo.text and taskDueInfo.text.length > 0
+          dueStatus = taskDueInfo.status ? ""
+          dueHtml = "<span class='badge due-#{escapeAttr(dueStatus)}'>#{escapeHtml(taskDueInfo.text)}</span>"
 
-        html += "<li class='task-item #{taskTypeClass} #{completedClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{escapeAttr(taskPriority)}' data-due='#{escapeAttr(taskDue)}' data-section='#{escapeAttr(taskSection)}' style='margin-left: #{indentPx}px'>"
+        html += "<li class='task-item #{taskTypeClass} #{completedClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{escapeAttr(priority)}' data-due='#{escapeAttr(taskDue)}' data-section='#{escapeAttr(taskSection)}' style='margin-left: #{indentPx}px'>"
+        html += "<div class='priority-indicator #{priorityClass}' title='Priority: #{if priority then priority else 'none'}'></div>"
         html += "<div class='checkbox'></div>"
         html += "<div class='text-wrap'>"
         html += "<div class='text edit-task-btn' title='Edit task'>#{escapeHtml(taskText)}</div>"
-        html += "<div class='meta'>#{metaHtml}</div>"
+        html += "<div class='meta'>#{dueHtml}</div>"
         html += "</div>"
         html += "<div class='add-sub-btn' title='Add sub-task'>+</div>"
         html += "<div class='delete-btn' title='Delete'>×</div>"
@@ -374,7 +440,7 @@ update: (output, domEl) ->
   @renderOutput(output, domEl)
 
 afterRender: (domEl) ->
-  helperPath = "'/Users/rock/Library/Application Support/Übersicht/widgets/todo_helper.py'"
+  helperPath = "todo_helper.py"
   pythonCmd = "/usr/bin/python3"
 
   escapeForAppleScript = (text) ->
@@ -519,4 +585,4 @@ afterRender: (domEl) ->
 
   $(domEl).on 'click', '.open-file-btn', (e) =>
     e.stopPropagation()
-    @run "open '/Users/rock/Documents/todo.txt'"
+    @run "open \"$HOME/Documents/todo.txt\""
