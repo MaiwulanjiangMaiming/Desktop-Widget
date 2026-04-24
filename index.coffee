@@ -6,7 +6,7 @@
 
 command: "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
 
-refreshFrequency: 60000
+refreshFrequency: 3600000
 
 style: """
   bottom: 73px
