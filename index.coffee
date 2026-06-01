@@ -3,16 +3,31 @@
 #
 #  Desktop Agenda - A beautiful todo widget for Übersicht
 #  Pure CoffeeScript implementation - no Python required!
+#
+#  --------------------------------------------------------------------------
+#  AI features: fill in apiKey below to enable natural-language task input.
+#  Any OpenAI-compatible endpoint works (OpenAI / Anthropic-via-proxy / Ollama / etc.)
+#  For local Ollama, set apiKey to "" and apiUrl to http://localhost:11434/v1/chat/completions
+#  --------------------------------------------------------------------------
 
 command: "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
 
 refreshFrequency: 3600000
 
+AI_CONFIG:
+  apiUrl: "https://api.minimaxi.com/v1/chat/completions"
+  apiKey: ""
+  model: "MiniMax-M2.5-highspeed"
+
+TOKEN_CONFIG:
+  monthlyBudget: 1000000
+  storageKey: "desktop_agenda_token_usage"
+
 style: """
   bottom: 73px
   left: 20px
   width: 300px
-  height: 340px
+  height: 390px
   overflow: hidden
   overflow-x: hidden
   display: flex
@@ -107,6 +122,115 @@ style: """
     align-items: center
     gap: 4px
 
+  .token-ring-wrap
+    position: relative
+    width: 22px
+    height: 22px
+    display: flex
+    align-items: center
+    justify-content: center
+    cursor: help
+    margin-right: 2px
+
+  .token-ring-wrap svg
+    width: 22px
+    height: 22px
+    display: block
+
+  .token-ring-bg
+    fill: none
+    stroke: rgba(255, 255, 255, 0.1)
+    stroke-width: 3
+
+  .token-ring-fg
+    fill: none
+    stroke-width: 3
+    stroke-linecap: round
+    transform: rotate(-90deg)
+    transform-origin: center
+    transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease
+
+  .token-ring-fg.low
+    stroke: #66ccff
+
+  .token-ring-fg.medium
+    stroke: #ffce54
+
+  .token-ring-fg.high
+    stroke: #ff8585
+
+  .token-ring-fg.over
+    stroke: #ff5f5f
+
+  .token-ring-text
+    font-size: 7px
+    fill: rgba(255, 255, 255, 0.85)
+    text-anchor: middle
+    dominant-baseline: central
+    font-weight: 600
+    font-family: -apple-system, "SF Pro Display", sans-serif
+    pointer-events: none
+
+  .token-tooltip
+    position: absolute
+    top: 30px
+    right: -4px
+    min-width: 180px
+    background: rgba(20, 20, 25, 0.96)
+    border: 1px solid rgba(255, 255, 255, 0.12)
+    border-radius: 8px
+    padding: 10px 12px
+    font-size: 11px
+    color: rgba(255, 255, 255, 0.9)
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5)
+    opacity: 0
+    visibility: hidden
+    transform: translateY(-4px)
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s
+    z-index: 100
+    pointer-events: none
+    line-height: 1.6
+
+  .token-ring-wrap:hover .token-tooltip
+    opacity: 1
+    visibility: visible
+    transform: translateY(0)
+
+  .token-tooltip-title
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.5)
+    text-transform: uppercase
+    letter-spacing: 0.5px
+    margin-bottom: 6px
+    padding-bottom: 4px
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08)
+
+  .token-tooltip-row
+    display: flex
+    justify-content: space-between
+    gap: 12px
+    margin: 2px 0
+
+  .token-tooltip-label
+    color: rgba(255, 255, 255, 0.55)
+
+  .token-tooltip-value
+    color: rgba(255, 255, 255, 0.92)
+    font-weight: 500
+    font-variant-numeric: tabular-nums
+
+  .token-tooltip-bar
+    margin-top: 6px
+    height: 3px
+    background: rgba(255, 255, 255, 0.08)
+    border-radius: 2px
+    overflow: hidden
+
+  .token-tooltip-bar-fill
+    height: 100%
+    border-radius: 2px
+    transition: width 0.3s ease, background 0.3s ease
+
   .action-btn
     width: 22px
     height: 22px
@@ -167,10 +291,16 @@ style: """
     border-radius: 1px
     transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1)
 
+  .todo-container
+    display: flex
+    flex-direction: column
+    height: 100%
+
   #todo-content
     overflow-y: auto
     overflow-x: hidden
-    height: calc(340px - 100px)
+    flex: 1
+    min-height: 0
 
   .section
     margin-bottom: 8px
@@ -437,6 +567,75 @@ style: """
     font-size: 12px
     text-align: center
 
+  .input-bar
+    display: flex
+    align-items: center
+    gap: 6px
+    padding-top: 8px
+    border-top: 1px solid rgba(255, 255, 255, 0.06)
+    margin-top: 6px
+    flex-shrink: 0
+
+  .input-field
+    flex: 1
+    background: rgba(255, 255, 255, 0.06)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    border-radius: 8px
+    padding: 6px 10px
+    font-size: 12px
+    color: rgba(255, 255, 255, 0.9)
+    outline: none
+    font-family: -apple-system, "SF Pro Display", sans-serif
+    transition: all 0.15s ease
+
+  .input-field:focus
+    border-color: #66ccff
+    background: rgba(255, 255, 255, 0.08)
+    box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.15)
+
+  .input-field::placeholder
+    color: rgba(255, 255, 255, 0.3)
+
+  .input-field:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+  .send-btn
+    width: 28px
+    height: 28px
+    display: flex
+    align-items: center
+    justify-content: center
+    border-radius: 7px
+    background: rgba(102, 204, 255, 0.15)
+    color: #66ccff
+    cursor: pointer
+    font-size: 13px
+    transition: all 0.15s ease
+    flex-shrink: 0
+
+  .send-btn:hover
+    background: rgba(102, 204, 255, 0.25)
+
+  .send-btn:disabled
+    opacity: 0.3
+    cursor: not-allowed
+
+  .ai-status
+    font-size: 10px
+    color: rgba(102, 204, 255, 0.6)
+    padding-top: 3px
+    display: none
+    flex-shrink: 0
+
+  .ai-status.visible
+    display: block
+    animation: pulse 1.5s infinite
+
+  .ai-status.error
+    color: #ff9d9d
+    animation: none
+
   .error
     color: #ff4d4d
     font-size: 11px
@@ -450,6 +649,22 @@ render: -> """
         <h1>Agenda</h1>
       </div>
       <div class="header-actions">
+        <div class="token-ring-wrap" id="token-ring">
+          <svg viewBox="0 0 22 22">
+            <circle class="token-ring-bg" cx="11" cy="11" r="8.5"></circle>
+            <circle class="token-ring-fg low" id="token-ring-fg" cx="11" cy="11" r="8.5" stroke-dasharray="53.41" stroke-dashoffset="53.41"></circle>
+            <text class="token-ring-text" id="token-ring-text" x="11" y="11">0%</text>
+          </svg>
+          <div class="token-tooltip" id="token-tooltip">
+            <div class="token-tooltip-title">Token Usage</div>
+            <div class="token-tooltip-row"><span class="token-tooltip-label">Used</span><span class="token-tooltip-value" id="tt-used">0</span></div>
+            <div class="token-tooltip-row"><span class="token-tooltip-label">Budget</span><span class="token-tooltip-value" id="tt-budget">—</span></div>
+            <div class="token-tooltip-row"><span class="token-tooltip-label">Remaining</span><span class="token-tooltip-value" id="tt-remaining">—</span></div>
+            <div class="token-tooltip-row"><span class="token-tooltip-label">Calls</span><span class="token-tooltip-value" id="tt-calls">0</span></div>
+            <div class="token-tooltip-row"><span class="token-tooltip-label">Last call</span><span class="token-tooltip-value" id="tt-last">—</span></div>
+            <div class="token-tooltip-bar"><div class="token-tooltip-bar-fill" id="tt-bar-fill" style="width: 0%"></div></div>
+          </div>
+        </div>
         <span class="action-btn add-section-btn" title="Add category">＋</span>
         <span class="action-btn open-file-btn" title="Open todo.txt">📄</span>
         <span class="action-btn refresh-btn" title="Refresh">↻</span>
@@ -462,12 +677,20 @@ render: -> """
     </div>
     <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
     <div id="todo-content">Loading...</div>
+    <div class="input-bar">
+      <input type="text" class="input-field" id="ai-input" placeholder="Type a task or command..." autocomplete="off" />
+      <span class="send-btn" id="ai-send-btn">↑</span>
+    </div>
+    <div class="ai-status" id="ai-status">AI 处理中...</div>
   </div>
 """
 
 DELIMITER: '=========='
 
 _cachedContent: null
+_commandHistory: []
+_historyIndex: -1
+_draftBeforeHistory: ""
 
 escapeHtml: (value) ->
   String(value ? "")
@@ -698,7 +921,215 @@ findSectionBounds: (lines, sectionTitle) ->
       return [i, nextHeader]
   null
 
+buildAIPrompt: ->
+  today = new Date()
+  y = today.getFullYear()
+  m = String(today.getMonth() + 1).padStart(2, '0')
+  d = String(today.getDate()).padStart(2, '0')
+  dateStr = "#{y}-#{m}-#{d}"
+  """You are a task management assistant. The user sends natural-language commands in Chinese (mostly). Understand the intent and return the updated full task list.
+
+## File format rules
+- Lines starting with # are category titles, e.g. # Work
+- Lines starting with · are pending tasks, e.g. · write report |p:high |d:2026-06-15
+- Lines starting with - are completed tasks (- space then content), e.g. - · write report |p:high |d:2026-06-15
+- |p:high / |p:medium / |p:low for priority
+- |d:YYYY-MM-DD for due date
+- 2-space indent means a sub-task
+
+## Behavior rules
+1. Output ONLY the updated full file content. No explanation, no comments, no markdown fences.
+2. Execute the intent: add / complete / delete / modify / new category, etc.
+3. When adding a task without a specified category, place it in the most appropriate existing category; otherwise use # Inbox.
+4. New tasks default to · prefix.
+5. "完成/做完了/搞定了/done" → mark the matching task(s) as completed (prefix with - ).
+6. "删除/去掉/remove" → delete the matching task(s).
+7. Preserve existing task metadata (priority, due date) when unchanged.
+8. Parse provided due date / priority tokens and attach them.
+9. Today's date is #{dateStr}. Interpret relative dates accordingly (今天=0, 明天=+1, 这周=next Sunday, 下周=+7, etc.).
+10. If the message is unrelated to tasks, return the list unchanged.
+
+## Batch / multi-task rules (IMPORTANT)
+11. When the user lists multiple items with separators like "、" / "和" / "and" / ",", apply the SAME operation to ALL matching items in a single response.
+    Examples:
+    - "把 A 和 B 都删了" → delete both A and B
+    - "A、B、C 都完成了" → mark A, B, C as completed
+    - "添加三个任务：X、Y、Z" → add three new tasks
+12. When the user provides a list of new tasks in one message, create ALL of them in one response.
+13. When the user says "移到 X 分类" or "move to X", remove the task from its current category and place it under the target category header (create the category if it doesn't exist).
+14. Sub-tasks: if the user says "在 X 下加一个子任务 Y", insert Y with 2-space indent directly below X.
+15. For ambiguous matches, prefer the most recent / first match rather than asking for clarification.
+16. Return the FULL file content every time, not just the diff."""
+
+callAI: (userInput, domEl) ->
+  content = @_cachedContent ? ""
+  inputField = $(domEl).find('#ai-input')
+  sendBtn = $(domEl).find('#ai-send-btn')
+  statusEl = $(domEl).find('#ai-status')
+
+  if @_commandHistory[@_commandHistory.length - 1] != userInput
+    @_commandHistory.push(userInput)
+    if @_commandHistory.length > 30
+      @_commandHistory.shift()
+  @_historyIndex = -1
+  @_draftBeforeHistory = ""
+
+  inputField.prop('disabled', true)
+  sendBtn.prop('disabled', true)
+  statusEl.text('AI processing...').addClass('visible')
+
+  systemPrompt = @buildAIPrompt()
+  userMessage = "Current task list:\n#{content}\n\nUser input: #{userInput}"
+
+  headers = { "Content-Type": "application/json" }
+  if @AI_CONFIG.apiKey
+    headers["Authorization"] = "Bearer #{@AI_CONFIG.apiKey}"
+
+  requestBody = JSON.stringify({
+    model: @AI_CONFIG.model
+    messages: [
+      { role: "system", content: systemPrompt }
+      { role: "user", content: userMessage }
+    ]
+    temperature: 0.3
+  })
+
+  self = @
+  fetch(@AI_CONFIG.apiUrl, {
+    method: "POST"
+    headers: headers
+    body: requestBody
+  })
+  .then (response) ->
+    if !response.ok
+      throw new Error("HTTP " + response.status)
+    response.json()
+  .then (data) ->
+    inputField.prop('disabled', false)
+    sendBtn.prop('disabled', false)
+    statusEl.removeClass('visible').text('AI processing...')
+    inputField.val('')
+
+    if data.choices?[0]?.message?.content
+      newContent = data.choices[0].message.content.trim()
+      newContent = newContent.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '')
+      newContent = newContent.replace(/<think\s*\/?>[\s\S]*?<\/think\s*\/?>/gi, '')
+      newContent = newContent.trim()
+      totalTokens = parseInt(data.usage?.total_tokens) || 0
+      if totalTokens > 0
+        self._recordTokenUsage(totalTokens, domEl)
+      if newContent.length > 0
+        self.saveAndRefresh(newContent, domEl)
+      else
+        self._showError(statusEl, "Empty response, list unchanged")
+    else if data.base_resp?.status_msg
+      self._showError(statusEl, "AI: " + data.base_resp.status_msg)
+    else
+      self._showError(statusEl, "Unexpected response format")
+  .catch (err) ->
+    inputField.prop('disabled', false)
+    sendBtn.prop('disabled', false)
+    self._showError(statusEl, "Failed: " + (err.message || err))
+    console.error("AI error:", err)
+
+_showError: (statusEl, msg) ->
+  statusEl.text(msg).addClass('visible error')
+  setTimeout (=> statusEl.removeClass('visible error').text('AI processing...')), 4000
+
+_tokenUsageCache: null
+
+_currentMonthKey: ->
+  t = new Date()
+  "#{t.getFullYear()}-#{String(t.getMonth() + 1).padStart(2, '0')}"
+
+_loadTokenUsage: (callback) ->
+  @_tokenUsageCache = {month: @_currentMonthKey(), totalTokens: 0, calls: 0, lastCallAt: null}
+  try
+    raw = localStorage.getItem(@TOKEN_CONFIG.storageKey)
+    if raw
+      parsed = JSON.parse(raw)
+      if parsed.month == @_currentMonthKey()
+        @_tokenUsageCache.totalTokens = parseInt(parsed.totalTokens) || 0
+        @_tokenUsageCache.calls = parseInt(parsed.calls) || 0
+        @_tokenUsageCache.lastCallAt = parseInt(parsed.lastCallAt) || null
+  catch
+    pass
+  callback?(@_tokenUsageCache)
+
+_recordTokenUsage: (tokens, domEl) ->
+  @_tokenUsageCache ?= {month: @_currentMonthKey(), totalTokens: 0, calls: 0, lastCallAt: null}
+  if @_tokenUsageCache.month != @_currentMonthKey()
+    @_tokenUsageCache = {month: @_currentMonthKey(), totalTokens: 0, calls: 0, lastCallAt: null}
+  @_tokenUsageCache.totalTokens += tokens
+  @_tokenUsageCache.calls += 1
+  @_tokenUsageCache.lastCallAt = Date.now()
+  @_saveTokenUsage()
+  @_renderTokenRing(domEl)
+
+_saveTokenUsage: ->
+  try
+    localStorage.setItem(@TOKEN_CONFIG.storageKey, JSON.stringify(@_tokenUsageCache))
+  catch
+    pass
+
+_formatNumber: (n) ->
+  n = parseInt(n) || 0
+  if n >= 1000000
+    (n / 1000000).toFixed(2) + "M"
+  else if n >= 1000
+    (n / 1000).toFixed(1) + "k"
+  else
+    String(n)
+
+_formatRelativeTime: (ts) ->
+  return "—" unless ts
+  diff = Date.now() - ts
+  if diff < 60000 then "just now"
+  else if diff < 3600000 then Math.floor(diff / 60000) + "m ago"
+  else if diff < 86400000 then Math.floor(diff / 3600000) + "h ago"
+  else Math.floor(diff / 86400000) + "d ago"
+
+_renderTokenRing: (domEl) ->
+  return unless @_tokenUsageCache
+  return unless domEl
+  $ring = $(domEl).find('#token-ring-fg')
+  $text = $(domEl).find('#token-ring-text')
+  $used = $(domEl).find('#tt-used')
+  $budget = $(domEl).find('#tt-budget')
+  $remaining = $(domEl).find('#tt-remaining')
+  $calls = $(domEl).find('#tt-calls')
+  $last = $(domEl).find('#tt-last')
+  $bar = $(domEl).find('#tt-bar-fill')
+  return unless $ring.length
+
+  circumference = 2 * Math.PI * 8.5
+  used = @_tokenUsageCache.totalTokens
+  budget = parseInt(@TOKEN_CONFIG.monthlyBudget) || 0
+  pct = if budget > 0 then Math.min(100, Math.round(used / budget * 100)) else 0
+  remaining = Math.max(0, budget - used)
+
+  dashOffset = circumference * (1 - pct / 100)
+  $ring.attr('stroke-dasharray', circumference.toFixed(2))
+  $ring.attr('stroke-dashoffset', dashOffset.toFixed(2))
+
+  levelClass = if pct >= 100 then 'over' else if pct >= 80 then 'high' else if pct >= 50 then 'medium' else 'low'
+  $ring.attr('class', "token-ring-fg #{levelClass}")
+  $text.text(if pct >= 100 then "!" else "#{pct}%")
+
+  $used.text(@_formatNumber(used))
+  $budget.text(if budget > 0 then @_formatNumber(budget) else "—")
+  $remaining.text(if budget > 0 then @_formatNumber(remaining) else "—")
+  $calls.text(@_tokenUsageCache.calls)
+  $last.text(@_formatRelativeTime(@_tokenUsageCache.lastCallAt))
+
+  $bar.css('width', Math.min(100, pct) + '%')
+  barColor = if pct >= 100 then '#ff5f5f' else if pct >= 80 then '#ff8585' else if pct >= 50 then '#ffce54' else '#66ccff'
+  $bar.css('background', barColor)
+
 afterRender: (domEl) ->
+  @_loadTokenUsage (usage) =>
+    @_renderTokenRing(domEl)
+
   refreshData = =>
     @run "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''", (err, output) =>
       if !err && output?
@@ -711,6 +1142,58 @@ afterRender: (domEl) ->
     safeDefault = (defaultValue ? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/'/g, "\\'")
     script = "osascript -e 'tell application \"Finder\" to activate' -e 'tell application \"Finder\" to display dialog \"#{safePrompt}\" default answer \"#{safeDefault}\" with title \"#{safeTitle}\"' -e 'text returned of result'"
     @run script, callback
+
+  $(domEl).on 'keydown', '#ai-input', (e) =>
+    inputEl = $(e.currentTarget)
+    key = e.key
+    code = e.keyCode
+
+    if key == 'Enter' or code == 13
+      e.preventDefault()
+      val = inputEl.val().trim()
+      return if val.length == 0
+      @callAI(val, domEl)
+      return
+
+    if key == 'Escape' or code == 27
+      e.preventDefault()
+      inputEl.val('')
+      @_historyIndex = -1
+      @_draftBeforeHistory = ""
+      return
+
+    if (key == 'ArrowUp' or code == 38) and @_commandHistory.length > 0
+      e.preventDefault()
+      if @_historyIndex == -1
+        @_draftBeforeHistory = inputEl.val()
+        @_historyIndex = @_commandHistory.length - 1
+      else if @_historyIndex > 0
+        @_historyIndex--
+      inputEl.val(@_commandHistory[@_historyIndex] ? "")
+      setTimeout((=> inputEl[0].selectionStart = inputEl.val().length), 0)
+      return
+
+    if (key == 'ArrowDown' or code == 40)
+      e.preventDefault()
+      if @_historyIndex == -1
+        return
+      if @_historyIndex < @_commandHistory.length - 1
+        @_historyIndex++
+        inputEl.val(@_commandHistory[@_historyIndex] ? "")
+      else
+        @_historyIndex = -1
+        inputEl.val(@_draftBeforeHistory)
+      return
+
+    if key == 'Tab' or code == 9
+      e.preventDefault()
+      inputEl.val(inputEl.val() + ' ') if inputEl.val().length > 0 and !inputEl.val().endsWith(' ')
+
+  $(domEl).on 'click', '#ai-send-btn', (e) =>
+    e.stopPropagation()
+    val = $(domEl).find('#ai-input').val().trim()
+    return if val.length == 0
+    @callAI(val, domEl)
 
   $(domEl).on 'click', '.checkbox', (e) =>
     e.stopPropagation()
