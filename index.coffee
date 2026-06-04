@@ -23,6 +23,8 @@ TOKEN_CONFIG:
   monthlyBudget: 1000000
   storageKey: "desktop_agenda_token_usage"
 
+SETTINGS_STORAGE_KEY: "desktop_agenda_ai_settings"
+
 style: """
   bottom: 73px
   left: 20px
@@ -636,6 +638,177 @@ style: """
     color: #ff9d9d
     animation: none
 
+  .settings-overlay
+    position: fixed
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background: rgba(0, 0, 0, 0.55)
+    display: none
+    align-items: center
+    justify-content: center
+    z-index: 200
+    backdrop-filter: blur(4px)
+    -webkit-backdrop-filter: blur(4px)
+
+  .settings-overlay.visible
+    display: flex
+
+  .settings-modal
+    width: 280px
+    background: rgba(30, 30, 35, 0.98)
+    border: 1px solid rgba(255, 255, 255, 0.12)
+    border-radius: 12px
+    padding: 16px
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6)
+    color: #fff
+    font-family: -apple-system, "SF Pro Display", sans-serif
+    animation: fadeIn 0.2s ease
+
+  .settings-title
+    display: flex
+    justify-content: space-between
+    align-items: center
+    margin-bottom: 12px
+    padding-bottom: 8px
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08)
+
+  .settings-title-text
+    font-size: 13px
+    font-weight: 600
+    color: rgba(255, 255, 255, 0.92)
+
+  .settings-close
+    cursor: pointer
+    color: rgba(255, 255, 255, 0.5)
+    font-size: 16px
+    line-height: 1
+    padding: 2px 6px
+    border-radius: 4px
+    transition: all 0.15s ease
+
+  .settings-close:hover
+    background: rgba(255, 255, 255, 0.08)
+    color: rgba(255, 255, 255, 0.9)
+
+  .settings-hint
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.4)
+    margin-bottom: 10px
+    line-height: 1.5
+
+  .settings-field
+    margin-bottom: 10px
+
+  .settings-label
+    display: flex
+    justify-content: space-between
+    align-items: center
+    font-size: 10px
+    color: rgba(255, 255, 255, 0.55)
+    text-transform: uppercase
+    letter-spacing: 0.5px
+    margin-bottom: 4px
+
+  .settings-label-hint
+    color: rgba(255, 255, 255, 0.3)
+    text-transform: none
+    letter-spacing: 0
+    font-size: 9px
+
+  .settings-input-wrap
+    position: relative
+    display: flex
+    align-items: center
+
+  .settings-input
+    width: 100%
+    background: rgba(255, 255, 255, 0.06)
+    border: 1px solid rgba(255, 255, 255, 0.1)
+    border-radius: 6px
+    padding: 6px 28px 6px 8px
+    font-size: 11px
+    color: rgba(255, 255, 255, 0.92)
+    font-family: -apple-system, "SF Pro Display", monospace
+    outline: none
+    box-sizing: border-box
+    transition: all 0.15s ease
+
+  .settings-input:focus
+    border-color: #66ccff
+    background: rgba(255, 255, 255, 0.08)
+    box-shadow: 0 0 0 2px rgba(102, 204, 255, 0.15)
+
+  .settings-input::placeholder
+    color: rgba(255, 255, 255, 0.25)
+
+  .settings-eye
+    position: absolute
+    right: 6px
+    cursor: pointer
+    color: rgba(255, 255, 255, 0.4)
+    font-size: 12px
+    padding: 2px 4px
+    border-radius: 3px
+    user-select: none
+    transition: color 0.15s ease
+
+  .settings-eye:hover
+    color: rgba(255, 255, 255, 0.85)
+
+  .settings-actions
+    display: flex
+    gap: 6px
+    margin-top: 12px
+    padding-top: 10px
+    border-top: 1px solid rgba(255, 255, 255, 0.08)
+
+  .settings-btn
+    flex: 1
+    padding: 6px 10px
+    border-radius: 6px
+    font-size: 11px
+    cursor: pointer
+    text-align: center
+    border: none
+    font-family: -apple-system, "SF Pro Display", sans-serif
+    transition: all 0.15s ease
+
+  .settings-btn.primary
+    background: rgba(102, 204, 255, 0.2)
+    color: #66ccff
+    font-weight: 500
+
+  .settings-btn.primary:hover
+    background: rgba(102, 204, 255, 0.32)
+
+  .settings-btn.secondary
+    background: rgba(255, 255, 255, 0.06)
+    color: rgba(255, 255, 255, 0.6)
+
+  .settings-btn.secondary:hover
+    background: rgba(255, 255, 255, 0.1)
+    color: rgba(255, 255, 255, 0.85)
+
+  .settings-btn.danger
+    background: rgba(255, 92, 92, 0.1)
+    color: rgba(255, 130, 130, 0.7)
+
+  .settings-btn.danger:hover
+    background: rgba(255, 92, 92, 0.2)
+    color: #ff9d9d
+
+  .settings-status
+    font-size: 10px
+    margin-top: 6px
+    text-align: center
+    min-height: 14px
+    color: rgba(102, 204, 255, 0.7)
+
+  .settings-status.error
+    color: #ff9d9d
+
   .error
     color: #ff4d4d
     font-size: 11px
@@ -665,6 +838,7 @@ render: -> """
             <div class="token-tooltip-bar"><div class="token-tooltip-bar-fill" id="tt-bar-fill" style="width: 0%"></div></div>
           </div>
         </div>
+        <span class="action-btn settings-btn-icon" title="AI Settings">⚙</span>
         <span class="action-btn add-section-btn" title="Add category">＋</span>
         <span class="action-btn open-file-btn" title="Open todo.txt">📄</span>
         <span class="action-btn refresh-btn" title="Refresh">↻</span>
@@ -681,7 +855,41 @@ render: -> """
       <input type="text" class="input-field" id="ai-input" placeholder="Type a task or command..." autocomplete="off" />
       <span class="send-btn" id="ai-send-btn">↑</span>
     </div>
-    <div class="ai-status" id="ai-status">AI 处理中...</div>
+    <div class="ai-status" id="ai-status">AI processing...</div>
+  </div>
+  <div class="settings-overlay" id="settings-overlay">
+    <div class="settings-modal">
+      <div class="settings-title">
+        <span class="settings-title-text">⚙ AI Settings</span>
+        <span class="settings-close" id="settings-close">×</span>
+      </div>
+      <div class="settings-hint">Fill in your AI provider details. Saved locally in this widget only.</div>
+      <div class="settings-field">
+        <div class="settings-label">API URL <span class="settings-label-hint">/chat/completions endpoint</span></div>
+        <div class="settings-input-wrap"><input type="text" class="settings-input" id="setting-api-url" placeholder="https://api.openai.com/v1/chat/completions" /></div>
+      </div>
+      <div class="settings-field">
+        <div class="settings-label">API Key <span class="settings-label-hint">leave empty if not required</span></div>
+        <div class="settings-input-wrap">
+          <input type="password" class="settings-input" id="setting-api-key" placeholder="sk-..." />
+          <span class="settings-eye" id="setting-api-key-eye">👁</span>
+        </div>
+      </div>
+      <div class="settings-field">
+        <div class="settings-label">Model <span class="settings-label-hint">e.g. gpt-4o-mini</span></div>
+        <div class="settings-input-wrap"><input type="text" class="settings-input" id="setting-model" placeholder="gpt-4o-mini" /></div>
+      </div>
+      <div class="settings-field">
+        <div class="settings-label">Monthly Token Budget <span class="settings-label-hint">0 = hide ring</span></div>
+        <div class="settings-input-wrap"><input type="number" class="settings-input" id="setting-budget" min="0" step="10000" placeholder="1000000" /></div>
+      </div>
+      <div class="settings-actions">
+        <span class="settings-btn danger" id="settings-reset">Reset</span>
+        <span class="settings-btn secondary" id="settings-cancel">Cancel</span>
+        <span class="settings-btn primary" id="settings-save">Save</span>
+      </div>
+      <div class="settings-status" id="settings-status"></div>
+    </div>
   </div>
 """
 
@@ -1126,7 +1334,77 @@ _renderTokenRing: (domEl) ->
   barColor = if pct >= 100 then '#ff5f5f' else if pct >= 80 then '#ff8585' else if pct >= 50 then '#ffce54' else '#66ccff'
   $bar.css('background', barColor)
 
+_loadStoredConfig: ->
+  try
+    raw = localStorage.getItem(@SETTINGS_STORAGE_KEY)
+    if raw
+      stored = JSON.parse(raw)
+      @AI_CONFIG.apiUrl = String(stored.apiUrl || @AI_CONFIG.apiUrl)
+      @AI_CONFIG.apiKey = String(if stored.apiKey != null then stored.apiKey else @AI_CONFIG.apiKey)
+      @AI_CONFIG.model = String(stored.model || @AI_CONFIG.model)
+      @TOKEN_CONFIG.monthlyBudget = parseInt(stored.monthlyBudget) || @TOKEN_CONFIG.monthlyBudget
+  catch
+    pass
+
+_saveStoredConfig: (cfg) ->
+  try
+    localStorage.setItem(@SETTINGS_STORAGE_KEY, JSON.stringify(cfg))
+    return true
+  catch
+    return false
+
+_resetStoredConfig: ->
+  try
+    localStorage.removeItem(@SETTINGS_STORAGE_KEY)
+  catch
+    pass
+
+_openSettings: (domEl) ->
+  $(domEl).find('#setting-api-url').val(@AI_CONFIG.apiUrl)
+  $(domEl).find('#setting-api-key').val(@AI_CONFIG.apiKey).attr('type', 'password')
+  $(domEl).find('#setting-model').val(@AI_CONFIG.model)
+  $(domEl).find('#setting-budget').val(@TOKEN_CONFIG.monthlyBudget)
+  $(domEl).find('#settings-status').text('').removeClass('error')
+  $(domEl).find('#settings-overlay').addClass('visible')
+  setTimeout (=> $(domEl).find('#setting-api-key').focus()), 100
+
+_closeSettings: (domEl) ->
+  $(domEl).find('#settings-overlay').removeClass('visible')
+
+_saveSettingsFromUI: (domEl) ->
+  apiUrl = $(domEl).find('#setting-api-url').val().trim()
+  apiKey = $(domEl).find('#setting-api-key').val()
+  model = $(domEl).find('#setting-model').val().trim()
+  budget = parseInt($(domEl).find('#setting-budget').val()) || 0
+  $status = $(domEl).find('#settings-status').removeClass('error')
+
+  if apiUrl.length == 0
+    $status.text('API URL cannot be empty').addClass('error')
+    return
+  if model.length == 0
+    $status.text('Model cannot be empty').addClass('error')
+    return
+
+  @AI_CONFIG.apiUrl = apiUrl
+  @AI_CONFIG.apiKey = apiKey
+  @AI_CONFIG.model = model
+  @TOKEN_CONFIG.monthlyBudget = budget
+
+  ok = @_saveStoredConfig({
+    apiUrl: apiUrl
+    apiKey: apiKey
+    model: model
+    monthlyBudget: budget
+  })
+
+  if ok
+    $status.text('✓ Saved').removeClass('error')
+    setTimeout (=> @_closeSettings(domEl); @_renderTokenRing(domEl)), 600
+  else
+    $status.text('Failed to save').addClass('error')
+
 afterRender: (domEl) ->
+  @_loadStoredConfig()
   @_loadTokenUsage (usage) =>
     @_renderTokenRing(domEl)
 
@@ -1194,6 +1472,59 @@ afterRender: (domEl) ->
     val = $(domEl).find('#ai-input').val().trim()
     return if val.length == 0
     @callAI(val, domEl)
+
+  $(domEl).on 'click', '.settings-btn-icon', (e) =>
+    e.stopPropagation()
+    @_openSettings(domEl)
+
+  $(domEl).on 'click', '#settings-close, #settings-cancel', (e) =>
+    e.stopPropagation()
+    @_closeSettings(domEl)
+
+  $(domEl).on 'click', '#settings-save', (e) =>
+    e.stopPropagation()
+    @_saveSettingsFromUI(domEl)
+
+  $(domEl).on 'click', '#settings-reset', (e) =>
+    e.stopPropagation()
+    $status = $(domEl).find('#settings-status')
+    $reset = $(e.currentTarget)
+    if $reset.data('confirming')
+      @_resetStoredConfig()
+      @AI_CONFIG.apiUrl = "https://api.minimaxi.com/v1/chat/completions"
+      @AI_CONFIG.apiKey = ""
+      @AI_CONFIG.model = "MiniMax-M2.5-highspeed"
+      @TOKEN_CONFIG.monthlyBudget = 1000000
+      $reset.data('confirming', false).text('Reset')
+      $status.text('✓ Reset to defaults').removeClass('error')
+      @_openSettings(domEl)
+      setTimeout (=> @_closeSettings(domEl); @_renderTokenRing(domEl)), 800
+    else
+      $reset.data('confirming', true).text('Click again to confirm')
+      $status.text('Click Reset again to confirm').removeClass('error')
+      setTimeout (=> $reset.data('confirming', false).text('Reset') if $reset.data('confirming')), 3000
+
+  $(domEl).on 'click', '#settings-overlay', (e) =>
+    if e.target == e.currentTarget
+      @_closeSettings(domEl)
+
+  $(domEl).on 'click', '#setting-api-key-eye', (e) =>
+    e.stopPropagation()
+    $input = $(domEl).find('#setting-api-key')
+    if $input.attr('type') == 'password'
+      $input.attr('type', 'text')
+      $(e.currentTarget).text('🙈')
+    else
+      $input.attr('type', 'password')
+      $(e.currentTarget).text('👁')
+
+  $(domEl).on 'keydown', '.settings-input', (e) =>
+    if e.key == 'Enter' or e.keyCode == 13
+      e.preventDefault()
+      @_saveSettingsFromUI(domEl)
+    if e.key == 'Escape' or e.keyCode == 27
+      e.preventDefault()
+      @_closeSettings(domEl)
 
   $(domEl).on 'click', '.checkbox', (e) =>
     e.stopPropagation()
