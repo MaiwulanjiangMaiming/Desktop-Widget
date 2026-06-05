@@ -122,7 +122,7 @@ style: """
   .header-actions
     display: flex
     align-items: center
-    gap: 4px
+    gap: 5px
 
   .token-ring-wrap
     position: relative
@@ -174,24 +174,24 @@ style: """
     pointer-events: none
 
   .token-tooltip
-    position: absolute
-    top: 30px
-    right: -4px
-    min-width: 180px
-    background: rgba(20, 20, 25, 0.96)
+    position: fixed
+    min-width: 200px
+    max-width: 280px
+    background: rgba(20, 20, 25, 0.98)
     border: 1px solid rgba(255, 255, 255, 0.12)
     border-radius: 8px
     padding: 10px 12px
     font-size: 11px
     color: rgba(255, 255, 255, 0.9)
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5)
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6)
     opacity: 0
     visibility: hidden
     transform: translateY(-4px)
     transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s
-    z-index: 100
+    z-index: 1000
     pointer-events: none
     line-height: 1.6
+    white-space: nowrap
 
   .token-ring-wrap:hover .token-tooltip
     opacity: 1
@@ -257,6 +257,18 @@ style: """
     height: 22px
     font-size: 11px
     border-radius: 6px
+
+  .action-btn.settings-btn-icon
+    width: 30px
+    height: 30px
+    font-size: 16px
+    border-radius: 8px
+
+  .action-btn.add-section-btn
+    width: 30px
+    height: 30px
+    font-size: 16px
+    border-radius: 8px
 
   .stats-bar
     display: flex
@@ -1349,6 +1361,15 @@ _renderTokenRing: (domEl) ->
   $bar.css('width', Math.min(100, pct) + '%')
   barColor = if pct >= 100 then '#ff5f5f' else if pct >= 80 then '#ff8585' else if pct >= 50 then '#ffce54' else '#66ccff'
   $bar.css('background', barColor)
+
+  $tooltip = $(domEl).find('#token-tooltip')
+  if $tooltip.length
+    $ringWrap = $(domEl).find('.token-ring-wrap')
+    if $ringWrap.length
+      rect = $ringWrap[0].getBoundingClientRect()
+      $tooltip.css
+        top: (rect.bottom + 6) + 'px'
+        left: rect.left + 'px'
 
 _loadStoredConfig: ->
   try
