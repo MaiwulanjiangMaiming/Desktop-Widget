@@ -234,16 +234,16 @@ style: """
     transition: width 0.3s ease, background 0.3s ease
 
   .action-btn
-    width: 22px
-    height: 22px
+    width: 26px
+    height: 26px
     display: flex
     align-items: center
     justify-content: center
-    border-radius: 6px
+    border-radius: 7px
     cursor: pointer
     transition: all 0.15s ease
     opacity: 0.5
-    font-size: 11px
+    font-size: 14px
 
   .action-btn:hover
     opacity: 1
@@ -251,6 +251,12 @@ style: """
 
   .action-btn:active
     transform: scale(0.9)
+
+  .action-btn.open-file-btn
+    width: 22px
+    height: 22px
+    font-size: 11px
+    border-radius: 6px
 
   .stats-bar
     display: flex
@@ -585,10 +591,20 @@ style: """
     border-radius: 8px
     padding: 6px 10px
     font-size: 12px
+    line-height: 1.4
     color: rgba(255, 255, 255, 0.9)
     outline: none
     font-family: -apple-system, "SF Pro Display", sans-serif
     transition: all 0.15s ease
+    resize: none
+    overflow-y: auto
+    min-height: 28px
+    max-height: 110px
+    box-sizing: border-box
+    width: 100%
+    word-break: break-word
+    white-space: pre-wrap
+    align-self: center
 
   .input-field:focus
     border-color: #66ccff
@@ -852,7 +868,7 @@ render: -> """
     <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
     <div id="todo-content">Loading...</div>
     <div class="input-bar">
-      <input type="text" class="input-field" id="ai-input" placeholder="Type a task or command..." autocomplete="off" />
+      <textarea class="input-field" id="ai-input" placeholder="Type a task or command..." rows="1" autocomplete="off" spellcheck="false"></textarea>
       <span class="send-btn" id="ai-send-btn">↑</span>
     </div>
     <div class="ai-status" id="ai-status">AI processing...</div>
@@ -1216,7 +1232,7 @@ callAI: (userInput, domEl) ->
     inputField.prop('disabled', false)
     sendBtn.prop('disabled', false)
     statusEl.removeClass('visible').text('AI processing...')
-    inputField.val('')
+    @_resetInput(domEl)
 
     if data.choices?[0]?.message?.content
       newContent = data.choices[0].message.content.trim()
@@ -1403,6 +1419,20 @@ _saveSettingsFromUI: (domEl) ->
   else
     $status.text('Failed to save').addClass('error')
 
+_autoResize: (domEl) ->
+  $input = $(domEl).find('#ai-input')
+  return unless $input.length
+  return if $input.prop('disabled')
+  $input[0].style.height = 'auto'
+  naturalH = $input[0].scrollHeight
+  $input[0].style.height = Math.min(110, Math.max(28, naturalH)) + 'px'
+  $input[0].scrollTop = $input[0].scrollHeight
+
+_resetInput: (domEl) ->
+  $input = $(domEl).find('#ai-input')
+  $input.val('')
+  @_autoResize(domEl)
+
 afterRender: (domEl) ->
   @_loadStoredConfig()
   @_loadTokenUsage (usage) =>
@@ -1421,12 +1451,17 @@ afterRender: (domEl) ->
     script = "osascript -e 'tell application \"Finder\" to activate' -e 'tell application \"Finder\" to display dialog \"#{safePrompt}\" default answer \"#{safeDefault}\" with title \"#{safeTitle}\"' -e 'text returned of result'"
     @run script, callback
 
+  $(domEl).on 'input', '#ai-input', (e) =>
+    @_autoResize(domEl)
+
   $(domEl).on 'keydown', '#ai-input', (e) =>
     inputEl = $(e.currentTarget)
     key = e.key
     code = e.keyCode
 
     if key == 'Enter' or code == 13
+      if e.shiftKey
+        return
       e.preventDefault()
       val = inputEl.val().trim()
       return if val.length == 0
@@ -1435,7 +1470,7 @@ afterRender: (domEl) ->
 
     if key == 'Escape' or code == 27
       e.preventDefault()
-      inputEl.val('')
+      @_resetInput(domEl)
       @_historyIndex = -1
       @_draftBeforeHistory = ""
       return
@@ -1448,7 +1483,10 @@ afterRender: (domEl) ->
       else if @_historyIndex > 0
         @_historyIndex--
       inputEl.val(@_commandHistory[@_historyIndex] ? "")
-      setTimeout((=> inputEl[0].selectionStart = inputEl.val().length), 0)
+      setTimeout((=>
+        inputEl[0].selectionStart = inputEl.val().length
+        @_autoResize(domEl)
+      ), 0)
       return
 
     if (key == 'ArrowDown' or code == 40)
@@ -1461,6 +1499,7 @@ afterRender: (domEl) ->
       else
         @_historyIndex = -1
         inputEl.val(@_draftBeforeHistory)
+      setTimeout((=> @_autoResize(domEl)), 0)
       return
 
     if key == 'Tab' or code == 9
