@@ -8,6 +8,10 @@
 #  AI features: fill in apiKey below to enable natural-language task input.
 #  Any OpenAI-compatible endpoint works (OpenAI / Anthropic-via-proxy / Ollama / etc.)
 #  For local Ollama, set apiKey to "" and apiUrl to http://localhost:11434/v1/chat/completions
+#
+#  Tip: have an old-format todo.txt (· prefix, |p:high metadata)?
+#  Just type "整理一下格式" or "clean up" in the AI input bar at the bottom
+#  and the AI will reformat it to the clean YAML style automatically.
 #  --------------------------------------------------------------------------
 
 command: "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
@@ -895,7 +899,7 @@ render: -> """
     <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
     <div id="todo-content">Loading...</div>
     <div class="input-bar">
-      <textarea class="input-field" id="ai-input" placeholder="Type a task or command..." rows="1" autocomplete="off" spellcheck="false"></textarea>
+      <textarea class="input-field" id="ai-input" placeholder="Type a task, command, or '整理一下格式' to clean up..." rows="1" autocomplete="off" spellcheck="false"></textarea>
       <span class="send-btn" id="ai-send-btn">↑</span>
     </div>
     <div class="ai-status" id="ai-status">AI processing...</div>
