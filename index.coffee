@@ -1061,9 +1061,23 @@ parseTodo: (content) ->
       if meta.priority
         pendingTask.priority = meta.priority
         pendingTask.dueInfo = @formatDueDate(pendingTask.due)
-      if meta.due
+      else if meta.due
         pendingTask.due = meta.due
         pendingTask.dueInfo = @formatDueDate(meta.due)
+      else
+        subTask = @parseTaskLine(line)
+        subTask.id = originalLineNum
+        subTask.line = originalLineNum
+        subTask.section = currentSection.title
+        subTask.indent = indent
+        if subTask.completed
+          doneTasks.push(subTask)
+          pendingTask = null
+        else
+          activeCount++
+          overdueCount++ if subTask.dueInfo?.status == 'overdue'
+          currentSection.tasks.push(subTask)
+          pendingTask = subTask
       continue
     if !currentSection?
       currentSection = {title: "Inbox", deletable: false, tasks: [], _implicit: true}
