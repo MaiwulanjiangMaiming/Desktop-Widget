@@ -9,12 +9,12 @@
 #  Any OpenAI-compatible endpoint works (OpenAI / Anthropic-via-proxy / Ollama / etc.)
 #  For local Ollama, set apiKey to "" and apiUrl to http://localhost:11434/v1/chat/completions
 #
-#  Tip: have an old-format todo.txt (· prefix, |p:high metadata)?
+#  Tip: have an old-format todo (· prefix, |p:high metadata)?
 #  Just type "整理一下格式" or "clean up" in the AI input bar at the bottom
 #  and the AI will reformat it to the clean YAML style automatically.
 #  --------------------------------------------------------------------------
 
-command: "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
+command: "cat \"$HOME/Documents/todo.yaml\" 2>/dev/null || cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
 
 refreshFrequency: 3600000
 
@@ -29,7 +29,7 @@ TOKEN_CONFIG:
 
 SETTINGS_STORAGE_KEY: "desktop_agenda_ai_settings"
 
-# Editor preference for opening todo.txt. null = auto-detect at runtime.
+# Editor preference for opening todo.yaml. null = auto-detect at runtime.
 # One of: "vscode" | "markedit" | "textedit" | "system" (uses .txt default app)
 EDITORS:
   vscode: "Visual Studio Code"
@@ -895,7 +895,7 @@ render: -> """
         </div>
         <span class="action-btn settings-btn-icon" title="AI Settings">⚙</span>
         <span class="action-btn add-section-btn" title="Add category">＋</span>
-        <span class="action-btn open-file-btn" title="Open todo.txt">📄</span>
+        <span class="action-btn open-file-btn" title="Open todo.yaml">📄</span>
         <span class="action-btn refresh-btn" title="Refresh">↻</span>
       </div>
     </div>
@@ -1223,7 +1223,11 @@ saveAndRefresh: (content, domEl) ->
   @_cachedContent = content
   @renderOutput(content, domEl)
   safeContent = content.replace(/'/g, "'\\''")
-  @run "echo '#{safeContent}' > \"$HOME/Documents/todo.txt\""
+  # Write to todo.yaml. If a legacy todo.txt exists, remove it (one-time migration).
+  @run """
+    echo '#{safeContent}' > "$HOME/Documents/todo.yaml" && \
+    [ ! -f "$HOME/Documents/todo.txt" ] || rm -f "$HOME/Documents/todo.txt"
+  """
 
 getCachedLines: ->
   (@_cachedContent ? "").split('\n')
@@ -1533,33 +1537,50 @@ _saveStoredConfig: (cfg) ->
 
 _editorChoice: null
 
-# Open todo.txt in the user's chosen editor (or auto-detect).
-# We use AppleScript via osascript to do the detection + launch in a single
-# shell command — much more reliable than a chain of @run callbacks.
+# Open todo.yaml in the user's chosen editor (or auto-detect).
+# We use a single shell command to do detection + launch — more reliable
+# than a chain of @run callbacks. Falls back to legacy todo.txt during
+# the one-time migration window.
 _openFile: (domEl) ->
-  file = "$HOME/Documents/todo.txt"
+  yamlFile = "$HOME/Documents/todo.yaml"
+  txtFile = "$HOME/Documents/todo.txt"
   editor = @_editorChoice ? "auto"
 
   if editor == "auto"
-    # Try VS Code first (via 'code' on PATH), then MarkEdit (AppleScript bundle id),
-    # then TextEdit. Fall back to system default.
     cmd = """
+      FILE="$HOME/Documents/todo.yaml"
+      [ -f "$FILE" ] || FILE="$HOME/Documents/todo.txt"
       if command -v code >/dev/null 2>&1; then
-        code "#{file}"
+        code "$FILE"
       elif open -Ra "MarkEdit" 2>/dev/null; then
-        open -a "MarkEdit" "#{file}"
+        open -a "MarkEdit" "$FILE"
       else
-        open -e "#{file}"
+        open -e "$FILE"
       fi
     """
-  else if editor == "vscode"
-    cmd = "code \"#{file}\""
-  else if editor == "markedit"
-    cmd = "open -a \"MarkEdit\" \"#{file}\""
-  else if editor == "textedit"
-    cmd = "open -e \"#{file}\""
   else
-    cmd = "open \"#{file}\""
+    fileRef = "#{yamlFile} || #{txtFile}"
+    # For explicit picks, try yaml first then txt using shell logic
+    if editor == "vscode"
+      cmd = """
+        if [ -f "#{yamlFile}" ]; then code "#{yamlFile}"; \
+        elif [ -f "#{txtFile}" ]; then code "#{txtFile}"; fi
+      """
+    else if editor == "markedit"
+      cmd = """
+        if [ -f "#{yamlFile}" ]; then open -a "MarkEdit" "#{yamlFile}"; \
+        elif [ -f "#{txtFile}" ]; then open -a "MarkEdit" "#{txtFile}"; fi
+      """
+    else if editor == "textedit"
+      cmd = """
+        if [ -f "#{yamlFile}" ]; then open -e "#{yamlFile}"; \
+        elif [ -f "#{txtFile}" ]; then open -e "#{txtFile}"; fi
+      """
+    else
+      cmd = """
+        if [ -f "#{yamlFile}" ]; then open "#{yamlFile}"; \
+        elif [ -f "#{txtFile}" ]; then open "#{txtFile}"; fi
+      """
 
   @run cmd
 
@@ -1637,7 +1658,7 @@ afterRender: (domEl) ->
     @_renderTokenRing(domEl)
 
   refreshData = =>
-    @run "cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''", (err, output) =>
+    @run "cat \"$HOME/Documents/todo.yaml\" 2>/dev/null || cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''", (err, output) =>
       if !err && output?
         @_cachedContent = output
         @renderOutput(output, domEl)
