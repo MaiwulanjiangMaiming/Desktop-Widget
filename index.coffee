@@ -323,8 +323,13 @@ style: """
     min-height: 0
 
   .section
-    margin-bottom: 8px
+    margin-bottom: 10px
     animation: fadeIn 0.3s ease
+    padding: 2px 0
+
+  .section + .section
+    border-top: 1px solid rgba(255, 255, 255, 0.04)
+    padding-top: 8px
 
   .section-header
     display: flex
@@ -355,7 +360,7 @@ style: """
   .section-title
     font-size: 12px
     font-weight: 600
-    color: rgba(255, 255, 255, 0.7)
+    color: rgba(255, 255, 255, 0.85)
     text-transform: uppercase
     letter-spacing: 0.5px
     overflow: hidden
@@ -368,6 +373,10 @@ style: """
     flex-shrink: 0
     min-width: 14px
     text-align: center
+    background: rgba(255, 255, 255, 0.05)
+    padding: 1px 6px
+    border-radius: 8px
+    margin-left: 4px
 
   .section-actions
     display: inline-flex
@@ -419,6 +428,12 @@ style: """
 
   li:hover
     background: rgba(255, 255, 255, 0.04)
+
+  li.overdue
+    background: rgba(255, 92, 92, 0.06)
+
+  li.overdue:hover
+    background: rgba(255, 92, 92, 0.12)
 
   .priority-bar
     width: 2px
@@ -1146,13 +1161,14 @@ renderOutput: (content, domEl) ->
         level = Math.max(0, Math.floor((task.indent ? 0) / 2))
         indentPx = level * 14
         taskTypeClass = if level > 0 then "sub-task" else "parent-task"
-        
+        overdueClass = if not task.completed and task.dueInfo?.status == 'overdue' then "overdue" else ""
+
         dueHtml = ""
         if task.dueInfo?.text
           dueStatus = task.dueInfo.status ? ""
           dueHtml = "<span class='tag #{@escapeHtml(dueStatus)}'>#{@escapeHtml(task.dueInfo.text)}</span>"
-        
-        html += "<li class='task-item #{taskTypeClass} #{completedClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{@escapeHtml(priority)}' data-due='#{@escapeHtml(task.due ? "")}' data-section='#{@escapeHtml(task.section ? sectionTitle)}' style='margin-left: #{indentPx}px'>"
+
+        html += "<li class='task-item #{taskTypeClass} #{completedClass} #{overdueClass}' data-id='#{task.id}' data-level='#{level}' data-priority='#{@escapeHtml(priority)}' data-due='#{@escapeHtml(task.due ? "")}' data-section='#{@escapeHtml(task.section ? sectionTitle)}' style='margin-left: #{indentPx}px'>"
         html += "<div class='priority-bar #{priorityClass}'></div>"
         html += "<div class='checkbox'></div>"
         html += "<div class='task-body'>"
