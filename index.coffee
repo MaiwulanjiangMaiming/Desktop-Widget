@@ -1077,8 +1077,11 @@ parseTodo: (content) ->
         pendingTask.priority = meta.priority
         pendingTask.dueInfo = @formatDueDate(pendingTask.due)
       else if meta.due
+        wasOverdue = pendingTask.dueInfo?.status == 'overdue'
         pendingTask.due = meta.due
         pendingTask.dueInfo = @formatDueDate(meta.due)
+        if !wasOverdue and pendingTask.dueInfo?.status == 'overdue'
+          overdueCount++
       else
         subTask = @parseTaskLine(line)
         subTask.id = originalLineNum
