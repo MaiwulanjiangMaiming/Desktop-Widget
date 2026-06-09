@@ -14,7 +14,16 @@
 #  and the AI will reformat it to the clean YAML style automatically.
 #  --------------------------------------------------------------------------
 
-command: "cat \"$HOME/Documents/todo.yaml\" 2>/dev/null || cat \"$HOME/Documents/todo.txt\" 2>/dev/null || echo ''"
+command: """
+  YAML="$HOME/Documents/todo.yaml"
+  TXT="$HOME/Documents/todo.txt"
+  # One-time migration: if yaml doesn't exist but txt does, copy it.
+  if [ ! -f "$YAML" ] && [ -f "$TXT" ]; then
+    cp "$TXT" "$YAML"
+    rm -f "$TXT"
+  fi
+  cat "$YAML" 2>/dev/null || echo ''
+"""
 
 refreshFrequency: 3600000
 
