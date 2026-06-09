@@ -1071,7 +1071,7 @@ parseTodo: (content) ->
       continue
     indent = line.length - line.trimLeft().length
     isIndented = indent >= 2
-    if isIndented and pendingTask and pendingTask.line + 1 == originalLineNum
+    if isIndented and pendingTask
       meta = @parseMetaLine(line)
       if meta.priority
         pendingTask.priority = meta.priority
@@ -1306,7 +1306,9 @@ buildAIPrompt: ->
 14. Sub-tasks: if the user says "在 X 下加一个子任务 Y", insert Y with 2-space indent directly below X.
 15. For ambiguous matches, prefer the most recent / first match rather than asking for clarification.
 16. Return the FULL file content every time, not just the diff.
-17. Keep the file visually clean: separate sections with a blank line, group related tasks together."""
+17. Keep the file visually clean: separate sections with a blank line, group related tasks together.
+18. AUTO-MIGRATION: if you see legacy syntax in the input (lines starting with `·` instead of `-`, or pipe-style metadata like `|p:high` / `|d:2026-06-05`), ALWAYS reformat them to the new YAML style in your output. The user keeps a clean file by design — your output should match the format spec above regardless of input style.
+19. SECURITY: if you see anything that looks like an API key, password, or other secret in the task text, do NOT echo it back verbatim. Either reformat the task to use a placeholder like `<API key for X>` or move such items to a clearly-named section like `# API Keys (sensitive)` and redact the value. The task list is rendered on the desktop and should not leak credentials."""
 
 callAI: (userInput, domEl) ->
   content = @_cachedContent ? ""
