@@ -29,6 +29,14 @@ TOKEN_CONFIG:
 
 SETTINGS_STORAGE_KEY: "desktop_agenda_ai_settings"
 
+# Editor preference for opening todo.txt. null = auto-detect at runtime.
+# One of: "vscode" | "markedit" | "textedit" | "system" (uses .txt default app)
+EDITORS:
+  vscode: "Visual Studio Code"
+  markedit: "MarkEdit"
+  textedit: "TextEdit"
+  system: "System default"
+
 style: """
   bottom: 73px
   left: 20px
@@ -930,6 +938,18 @@ render: -> """
         <div class="settings-label">Monthly Token Budget <span class="settings-label-hint">0 = hide ring</span></div>
         <div class="settings-input-wrap"><input type="number" class="settings-input" id="setting-budget" min="0" step="10000" placeholder="1000000" /></div>
       </div>
+      <div class="settings-field">
+        <div class="settings-label">File Editor <span class="settings-label-hint">for the 📄 button</span></div>
+        <div class="settings-input-wrap">
+          <select class="settings-input" id="setting-editor" style="appearance: none; -webkit-appearance: none; padding-right: 10px; cursor: pointer;">
+            <option value="auto">Auto-detect</option>
+            <option value="vscode">VS Code</option>
+            <option value="markedit">MarkEdit</option>
+            <option value="textedit">TextEdit</option>
+            <option value="system">System default (.txt)</option>
+          </select>
+        </div>
+      </div>
       <div class="settings-actions">
         <span class="settings-btn danger" id="settings-reset">Reset</span>
         <span class="settings-btn secondary" id="settings-cancel">Cancel</span>
@@ -1500,6 +1520,7 @@ _loadStoredConfig: ->
       @AI_CONFIG.apiKey = String(if stored.apiKey != null then stored.apiKey else @AI_CONFIG.apiKey)
       @AI_CONFIG.model = String(stored.model || @AI_CONFIG.model)
       @TOKEN_CONFIG.monthlyBudget = parseInt(stored.monthlyBudget) || @TOKEN_CONFIG.monthlyBudget
+      @_editorChoice = if stored.editor and @EDITORS[stored.editor] then stored.editor else null
   catch
     pass
 
@@ -1509,6 +1530,57 @@ _saveStoredConfig: (cfg) ->
     return true
   catch
     return false
+
+_editorChoice: null
+
+# Detect which editor app is available on the system.
+# Returns the first matching editor id in priority order.
+_detectEditor: (callback) ->
+  if @_editorChoice
+    # User has chosen explicitly — use that, with light availability check
+    @_checkEditor(@_editorChoice, (ok) =>
+      return callback(@_editorChoice) if ok
+      # Fall back to auto-detect order
+      @_autoDetectEditor(callback)
+    )
+  else
+    @_autoDetectEditor(callback)
+
+_autoDetectEditor: (callback) ->
+  order = ["vscode", "markedit", "textedit"]
+  i = 0
+  tryNext = =>
+    return callback("system") if i >= order.length
+    editor = order[i]
+    i++
+    @_checkEditor(editor, (ok) ->
+      return callback(editor) if ok
+      tryNext()
+    )
+  tryNext()
+
+_checkEditor: (editor, callback) ->
+  switch editor
+    when "vscode"
+      @run "command -v code >/dev/null 2>&1", (err) -> callback(!err)
+    when "markedit"
+      @run "test -d \"/Applications/MarkEdit.app\" || test -d \"$HOME/Applications/MarkEdit.app\"", (err) -> callback(!err)
+    when "textedit"
+      callback(true)  # Always present on macOS
+    when "system"
+      callback(true)
+    else
+      callback(false)
+
+_openFile: (domEl) ->
+  file = "$HOME/Documents/todo.txt"
+  @_detectEditor (editor) =>
+    cmd = switch editor
+      when "vscode"   then "code \"#{file}\""
+      when "markedit" then "open -a \"MarkEdit\" \"#{file}\""
+      when "textedit" then "open -e \"#{file}\""
+      else "open \"#{file}\""
+    @run cmd
 
 _resetStoredConfig: ->
   try
@@ -1521,6 +1593,7 @@ _openSettings: (domEl) ->
   $(domEl).find('#setting-api-key').val(@AI_CONFIG.apiKey).attr('type', 'password')
   $(domEl).find('#setting-model').val(@AI_CONFIG.model)
   $(domEl).find('#setting-budget').val(@TOKEN_CONFIG.monthlyBudget)
+  $(domEl).find('#setting-editor').val(@_editorChoice ? "auto")
   $(domEl).find('#settings-status').text('').removeClass('error')
   $(domEl).find('#settings-overlay').addClass('visible')
   setTimeout (=> $(domEl).find('#setting-api-key').focus()), 100
@@ -1533,6 +1606,7 @@ _saveSettingsFromUI: (domEl) ->
   apiKey = $(domEl).find('#setting-api-key').val()
   model = $(domEl).find('#setting-model').val().trim()
   budget = parseInt($(domEl).find('#setting-budget').val()) || 0
+  editor = $(domEl).find('#setting-editor').val()
   $status = $(domEl).find('#settings-status').removeClass('error')
 
   if apiUrl.length == 0
@@ -1546,12 +1620,14 @@ _saveSettingsFromUI: (domEl) ->
   @AI_CONFIG.apiKey = apiKey
   @AI_CONFIG.model = model
   @TOKEN_CONFIG.monthlyBudget = budget
+  @_editorChoice = if editor == "auto" then null else editor
 
   ok = @_saveStoredConfig({
     apiUrl: apiUrl
     apiKey: apiKey
     model: model
     monthlyBudget: budget
+    editor: @_editorChoice
   })
 
   if ok
@@ -1675,6 +1751,7 @@ afterRender: (domEl) ->
       @AI_CONFIG.apiKey = ""
       @AI_CONFIG.model = "MiniMax-M2.5-highspeed"
       @TOKEN_CONFIG.monthlyBudget = 1000000
+      @_editorChoice = null
       $reset.data('confirming', false).text('Reset')
       $status.text('✓ Reset to defaults').removeClass('error')
       @_openSettings(domEl)
@@ -1870,4 +1947,4 @@ afterRender: (domEl) ->
 
   $(domEl).on 'click', '.open-file-btn', (e) =>
     e.stopPropagation()
-    @run "open \"$HOME/Documents/todo.txt\""
+    @_openFile(domEl)
