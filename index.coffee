@@ -966,23 +966,56 @@ parseTaskLine: (line) ->
   indent = line.length - line.trimLeft().length
   stripped = line.trim()
   completed = false
-  if stripped.startsWith('-')
+
+  # New YAML format: "- [x] task text"
+  completedMarker = stripped.match(/^-\s*\[x\]\s*/i)
+  if completedMarker
     completed = true
+    stripped = stripped.substring(completedMarker[0].length)
+  else if stripped.startsWith('- ')
+    stripped = stripped.substring(2)
+  else if stripped.startsWith('-')
     stripped = stripped.substring(1).trim()
-  if stripped.startsWith('·')
+  else if stripped.startsWith('·')
+    # Legacy · prefix
     stripped = stripped.substring(1).trim()
-  parts = stripped.split('|').map (p) -> p.trim()
-  text = parts[0] || ""
+
   priority = ""
   due = ""
-  for token in parts.slice(1)
-    if token.startsWith('p:')
-      val = token.substring(2).toLowerCase()
-      priority = val if val in ['high', 'medium', 'low']
-    else if token.startsWith('d:')
-      due = token.substring(2)
+  text = stripped
+
+  # Legacy: pipe-separated metadata "task | p:high | d:2026-06-05"
+  if text.indexOf('|') >= 0 and not text.match(/^[a-z_]+:\s/i)
+    parts = text.split('|').map (p) -> p.trim()
+    text = parts[0] || ""
+    for token in parts.slice(1)
+      if token.startsWith('p:')
+        val = token.substring(2).toLowerCase()
+        priority = val if val in ['high', 'medium', 'low']
+      else if token.startsWith('d:')
+        due = token.substring(2)
+
   dueInfo = @formatDueDate(due)
   {indent, completed, text, priority, due, dueInfo}
+
+parseMetaLine: (line) ->
+  stripped = line.trim()
+  return {} unless stripped
+  m = stripped.match(/^(priority|due)\s*:\s*(.+)$/i)
+  if m
+    key = m[1].toLowerCase()
+    val = m[2].trim()
+    return {priority: val.toLowerCase()} if key == 'priority' and val.toLowerCase() in ['high', 'medium', 'low']
+    return {due: val} if key == 'due'
+  {}
+
+parseSectionHeader: (stripped) ->
+  return null unless stripped
+  return null unless stripped.startsWith('#')
+  s = stripped.replace(/^#+/, '').trim()
+  s = s.replace(/^\=+|\=+$/g, '').trim()
+  return null unless s
+  s
 
 parseTodo: (content) ->
   return {sections: [], activeCount: 0, doneCount: 0, overdueCount: 0} unless content
@@ -1005,28 +1038,47 @@ parseTodo: (content) ->
   hasHeader = false
   activeCount = 0
   overdueCount = 0
+  pendingTask = null
+
   for line, i in contentLines
     originalLineNum = startIndex + i
     stripped = line.trim()
-    continue unless stripped
-    if stripped.startsWith('#')
+    if not stripped
+      pendingTask = null
+      continue
+    sectionTitle = @parseSectionHeader(stripped)
+    if sectionTitle
       hasHeader = true
       if currentSection?
         sections.push(currentSection)
-      title = stripped.replace(/^#+/, '').trim()
-      currentSection = {title, deletable: true, tasks: []}
+      currentSection = {title: sectionTitle, deletable: true, tasks: []}
+      pendingTask = null
+      continue
+    indent = line.length - line.trimLeft().length
+    isIndented = indent >= 2
+    if isIndented and pendingTask and pendingTask.line + 1 == originalLineNum
+      meta = @parseMetaLine(line)
+      if meta.priority
+        pendingTask.priority = meta.priority
+        pendingTask.dueInfo = @formatDueDate(pendingTask.due)
+      if meta.due
+        pendingTask.due = meta.due
+        pendingTask.dueInfo = @formatDueDate(meta.due)
+      continue
+    if !currentSection?
+      currentSection = {title: "Inbox", deletable: false, tasks: [], _implicit: true}
+    task = @parseTaskLine(line)
+    task.id = originalLineNum
+    task.line = originalLineNum
+    task.section = currentSection.title
+    if task.completed
+      doneTasks.push(task)
+      pendingTask = null
     else
-      if !currentSection?
-        currentSection = {title: "Inbox", deletable: false, tasks: [], _implicit: true}
-      task = @parseTaskLine(line)
-      task.id = originalLineNum
-      task.section = currentSection.title
-      if task.completed
-        doneTasks.push(task)
-      else
-        activeCount++
-        overdueCount++ if task.dueInfo?.status == 'overdue'
-        currentSection.tasks.push(task)
+      activeCount++
+      overdueCount++ if task.dueInfo?.status == 'overdue'
+      currentSection.tasks.push(task)
+      pendingTask = task
   if currentSection?
     sections.push(currentSection)
   if sections.length > 0 and sections[0]._implicit and sections[0].tasks.length == 0 and hasHeader
@@ -1127,12 +1179,18 @@ toggleLine: (lines, lineNum) ->
   indent = line.length - line.trimLeft().length
   prefix = line.substring(0, indent)
   content = line.substring(indent)
-  if content.startsWith('- ')
-    newContent = content.substring(2)
-  else if content.startsWith('-')
-    newContent = content.substring(1).trimLeft()
+
+  if /^\s*-\s*\[x\]/i.test(content)
+    newContent = content.replace(/-\s*\[x\]\s*/i, '- ')
+  else if /^\s*-\s/.test(content)
+    newContent = content.replace(/^-\s/, '- [x] ')
+  else if /^\s*-/.test(content)
+    newContent = content.replace(/^-/, '- [x] ')
+  else if /^\s*·/.test(content)
+    newContent = content.replace(/^·\s*/, '- [x] ')
   else
-    newContent = '- ' + content.trimLeft()
+    newContent = '- [x] ' + content.trimLeft()
+
   if !newContent.endsWith('\n')
     newContent += '\n'
   lines[lineNum] = prefix + newContent
@@ -1165,23 +1223,45 @@ buildAIPrompt: ->
   dateStr = "#{y}-#{m}-#{d}"
   """You are a task management assistant. The user sends natural-language commands in Chinese (mostly). Understand the intent and return the updated full task list.
 
-## File format rules
-- Lines starting with # are category titles, e.g. # Work
-- Lines starting with · are pending tasks, e.g. · write report |p:high |d:2026-06-15
-- Lines starting with - are completed tasks (- space then content), e.g. - · write report |p:high |d:2026-06-15
-- |p:high / |p:medium / |p:low for priority
-- |d:YYYY-MM-DD for due date
-- 2-space indent means a sub-task
+## File format (YAML-style, human-readable)
+
+```
+# ===== Work =====
+- 写周报
+  priority: high
+  due: 2026-06-05
+- 修 bug #123
+  - 找到 root cause
+  - 写 fix 并 PR
+- [x] 写文档
+
+# ===== Personal =====
+- 买牛奶
+```
+
+### Format rules
+- Category header: `# CategoryName` (optionally surrounded by `=====` for emphasis, both work)
+- Pending task: `- task text`
+- Completed task: `- [x] task text`
+- Sub-task: 2-space indent before `-` (any depth, but keep it sensible)
+- Priority: on the line directly below the task, with 2 extra spaces of indent:
+    `  priority: high|medium|low`
+- Due date: on the line directly below the task:
+    `  due: YYYY-MM-DD`
+- Blank lines between sections are fine and improve readability.
+- DO NOT use any other prefix (no `·`, no `|p:high` inline tokens, no `|d:date`).
+- DO NOT wrap output in markdown code fences.
+- Output ONLY the file content. No explanations.
 
 ## Behavior rules
 1. Output ONLY the updated full file content. No explanation, no comments, no markdown fences.
 2. Execute the intent: add / complete / delete / modify / new category, etc.
-3. When adding a task without a specified category, place it in the most appropriate existing category; otherwise use # Inbox.
-4. New tasks default to · prefix.
-5. "完成/做完了/搞定了/done" → mark the matching task(s) as completed (prefix with - ).
-6. "删除/去掉/remove" → delete the matching task(s).
+3. When adding a task without a specified category, place it in the most appropriate existing category; otherwise use `# Inbox`.
+4. New tasks default to `- ` prefix (pending). Only add `priority:` / `due:` lines if the user explicitly mentions priority or a date.
+5. "完成/做完了/搞定了/done" → mark the matching task(s) as completed: change `- task` to `- [x] task`.
+6. "删除/去掉/remove" → delete the matching task(s) entirely (including their sub-tasks and meta lines).
 7. Preserve existing task metadata (priority, due date) when unchanged.
-8. Parse provided due date / priority tokens and attach them.
+8. When the user provides a date/priority, add the corresponding `priority:` / `due:` lines.
 9. Today's date is #{dateStr}. Interpret relative dates accordingly (今天=0, 明天=+1, 这周=next Sunday, 下周=+7, etc.).
 10. If the message is unrelated to tasks, return the list unchanged.
 
@@ -1189,13 +1269,14 @@ buildAIPrompt: ->
 11. When the user lists multiple items with separators like "、" / "和" / "and" / ",", apply the SAME operation to ALL matching items in a single response.
     Examples:
     - "把 A 和 B 都删了" → delete both A and B
-    - "A、B、C 都完成了" → mark A, B, C as completed
+    - "A、B、C 都完成了" → mark A, B, C as completed (change `- X` to `- [x] X`)
     - "添加三个任务：X、Y、Z" → add three new tasks
 12. When the user provides a list of new tasks in one message, create ALL of them in one response.
 13. When the user says "移到 X 分类" or "move to X", remove the task from its current category and place it under the target category header (create the category if it doesn't exist).
 14. Sub-tasks: if the user says "在 X 下加一个子任务 Y", insert Y with 2-space indent directly below X.
 15. For ambiguous matches, prefer the most recent / first match rather than asking for clarification.
-16. Return the FULL file content every time, not just the diff."""
+16. Return the FULL file content every time, not just the diff.
+17. Keep the file visually clean: separate sections with a blank line, group related tasks together."""
 
 callAI: (userInput, domEl) ->
   content = @_cachedContent ? ""
@@ -1619,7 +1700,7 @@ afterRender: (domEl) ->
               insertIndex = j
               break
           break
-      newLine = "· #{taskText}\n"
+      newLine = "- #{taskText}\n"
       if sectionFound
         lines.splice(insertIndex, 0, newLine)
       else
@@ -1652,7 +1733,7 @@ afterRender: (domEl) ->
         candidateIndent = candidate.length - candidate.trimLeft().length
         break if candidateIndent <= parentIndent
         insertIndex++
-      newLine = " ".repeat(childIndent) + "· #{taskText}\n"
+      newLine = " ".repeat(childIndent) + "- #{taskText}\n"
       lines.splice(insertIndex, 0, newLine)
       @saveAndRefresh lines.join('\n'), domEl
 
@@ -1685,20 +1766,29 @@ afterRender: (domEl) ->
             stripped = line.trim()
             return if stripped.startsWith('#') or stripped == @DELIMITER
             indent = line.length - line.trimLeft().length
-            completed = stripped.startsWith('-')
-            metadata = []
-            if nextPriority
-              metadata.push("p:#{nextPriority}")
-            if nextDue
-              metadata.push("d:#{nextDue}")
-            body = "· #{nextText}"
-            if metadata.length > 0
-              body += " |" + metadata.join(" |")
+            completed = stripped.startsWith('-') or /^\s*-\s*\[x\]/i.test(line)
             prefix = " ".repeat(indent)
-            if completed
-              lines[id] = "#{prefix}- #{body}\n"
-            else
-              lines[id] = "#{prefix}#{body}\n"
+            newBody = if completed then "- [x] #{nextText}" else "- #{nextText}"
+
+            # Find existing meta lines (priority:/due:) directly after this task
+            removeCount = 1
+            j = id + 1
+            while j < lines.length
+              lj = lines[j]
+              strippedJ = lj.trim()
+              break if not strippedJ
+              break unless /^(priority|due)\s*:/i.test(strippedJ)
+              break if lj.length - lj.trimLeft().length < indent + 2
+              removeCount++
+              j++
+
+            newLines = ["#{prefix}#{newBody}\n"]
+            if nextPriority
+              newLines.push("#{prefix}  priority: #{nextPriority}\n")
+            if nextDue
+              newLines.push("#{prefix}  due: #{nextDue}\n")
+
+            lines.splice(id, removeCount, newLines...)
             @saveAndRefresh lines.join('\n'), domEl
 
   $(domEl).on 'click', '.clear-btn', (e) =>
