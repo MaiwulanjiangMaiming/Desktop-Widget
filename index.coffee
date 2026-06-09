@@ -1123,7 +1123,11 @@ parseTodo: (content) ->
         subTask.indent = indent
         if subTask.completed
           doneTasks.push(subTask)
-          pendingTask = null
+          # Keep the sub-task as pendingTask so its own meta lines (priority/due)
+          # are still associated with it. Meta lines attach to pendingTask based
+          # on their indent; sibling sub-tasks at the same indent will replace
+          # pendingTask (which is fine — meta below them belongs to them).
+          pendingTask = subTask
         else
           activeCount++
           overdueCount++ if subTask.dueInfo?.status == 'overdue'
@@ -1138,7 +1142,7 @@ parseTodo: (content) ->
     task.section = currentSection.title
     if task.completed
       doneTasks.push(task)
-      pendingTask = null
+      pendingTask = task
     else
       activeCount++
       overdueCount++ if task.dueInfo?.status == 'overdue'
@@ -1245,7 +1249,9 @@ toggleLine: (lines, lineNum) ->
   return lines unless 0 <= lineNum < lines.length
   line = lines[lineNum]
   stripped = line.trim()
+  # Skip headers, delimiters, and meta lines (priority:/due:) — they are not tasks.
   return lines if stripped.startsWith('#') or stripped == @DELIMITER
+  return lines if /^(priority|due)\s*:/i.test(stripped)
   indent = line.length - line.trimLeft().length
   prefix = line.substring(0, indent)
   content = line.substring(indent)
@@ -1261,8 +1267,8 @@ toggleLine: (lines, lineNum) ->
   else
     newContent = '- [x] ' + content.trimLeft()
 
-  if !newContent.endsWith('\n')
-    newContent += '\n'
+  # Do NOT add a trailing '\n' here — lines[] stores content without terminators.
+  # The caller joins with '\n' which provides separation.
   lines[lineNum] = prefix + newContent
   lines
 
@@ -1893,7 +1899,7 @@ afterRender: (domEl) ->
             stripped = line.trim()
             return if stripped.startsWith('#') or stripped == @DELIMITER
             indent = line.length - line.trimLeft().length
-            completed = stripped.startsWith('-') or /^\s*-\s*\[x\]/i.test(line)
+            completed = /^\s*-\s*\[x\]/i.test(line)
             prefix = " ".repeat(indent)
             newBody = if completed then "- [x] #{nextText}" else "- #{nextText}"
 
