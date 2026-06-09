@@ -1533,54 +1533,35 @@ _saveStoredConfig: (cfg) ->
 
 _editorChoice: null
 
-# Detect which editor app is available on the system.
-# Returns the first matching editor id in priority order.
-_detectEditor: (callback) ->
-  if @_editorChoice
-    # User has chosen explicitly — use that, with light availability check
-    @_checkEditor(@_editorChoice, (ok) =>
-      return callback(@_editorChoice) if ok
-      # Fall back to auto-detect order
-      @_autoDetectEditor(callback)
-    )
-  else
-    @_autoDetectEditor(callback)
-
-_autoDetectEditor: (callback) ->
-  order = ["vscode", "markedit", "textedit"]
-  i = 0
-  tryNext = =>
-    return callback("system") if i >= order.length
-    editor = order[i]
-    i++
-    @_checkEditor(editor, (ok) ->
-      return callback(editor) if ok
-      tryNext()
-    )
-  tryNext()
-
-_checkEditor: (editor, callback) ->
-  switch editor
-    when "vscode"
-      @run "command -v code >/dev/null 2>&1", (err) -> callback(!err)
-    when "markedit"
-      @run "test -d \"/Applications/MarkEdit.app\" || test -d \"$HOME/Applications/MarkEdit.app\"", (err) -> callback(!err)
-    when "textedit"
-      callback(true)  # Always present on macOS
-    when "system"
-      callback(true)
-    else
-      callback(false)
-
+# Open todo.txt in the user's chosen editor (or auto-detect).
+# We use AppleScript via osascript to do the detection + launch in a single
+# shell command — much more reliable than a chain of @run callbacks.
 _openFile: (domEl) ->
   file = "$HOME/Documents/todo.txt"
-  @_detectEditor (editor) =>
-    cmd = switch editor
-      when "vscode"   then "code \"#{file}\""
-      when "markedit" then "open -a \"MarkEdit\" \"#{file}\""
-      when "textedit" then "open -e \"#{file}\""
-      else "open \"#{file}\""
-    @run cmd
+  editor = @_editorChoice ? "auto"
+
+  if editor == "auto"
+    # Try VS Code first (via 'code' on PATH), then MarkEdit (AppleScript bundle id),
+    # then TextEdit. Fall back to system default.
+    cmd = """
+      if command -v code >/dev/null 2>&1; then
+        code "#{file}"
+      elif open -Ra "MarkEdit" 2>/dev/null; then
+        open -a "MarkEdit" "#{file}"
+      else
+        open -e "#{file}"
+      fi
+    """
+  else if editor == "vscode"
+    cmd = "code \"#{file}\""
+  else if editor == "markedit"
+    cmd = "open -a \"MarkEdit\" \"#{file}\""
+  else if editor == "textedit"
+    cmd = "open -e \"#{file}\""
+  else
+    cmd = "open \"#{file}\""
+
+  @run cmd
 
 _resetStoredConfig: ->
   try
